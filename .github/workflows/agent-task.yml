@@ -39,7 +39,7 @@ jobs:
   trello-inprogress:
     runs-on: ubuntu-latest
     name: Trello -> In Progress
-    needs: trello-todo
+    needs: code-confirm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -63,6 +63,20 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
           GITHUB_ACTOR: ${{ github.actor }}
+
+  code-confirm:
+    runs-on: ubuntu-latest
+    name: Confirm code pushed
+    needs: trello-todo
+    environment:
+      name: code-ready
+    steps:
+      - name: Show commit being built
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Ref: $GITHUB_REF"
+      - name: Confirm code source noted
+        run: echo "Proceed after verifying code is pushed."
 
   test-and-build:
     runs-on: ubuntu-latest
