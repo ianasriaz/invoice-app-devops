@@ -7,6 +7,10 @@ import 'package:gsheet/providers/invoice_provider.dart';
 import 'package:provider/provider.dart';
 
 class InvoiceForm extends StatefulWidget {
+  final bool skipInitialLoad;
+
+  const InvoiceForm({Key? key, this.skipInitialLoad = false}) : super(key: key);
+
   @override
   _InvoiceFormState createState() => _InvoiceFormState();
 }
@@ -22,9 +26,11 @@ class _InvoiceFormState extends State<InvoiceForm> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<InvoiceProvider>(context, listen: false).loadInitialData();
-    });
+    if (!widget.skipInitialLoad) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Provider.of<InvoiceProvider>(context, listen: false).loadInitialData();
+      });
+    }
     _bonus_controller.text = '0';
   }
 
@@ -74,7 +80,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
               children: [
                 DropdownButtonFormField<Customer>(
                   isExpanded: true,
-                  value: invoiceProvider.selectedCustomer,
+                  initialValue: invoiceProvider.selectedCustomer,
                   items: invoiceProvider.customers
                       .map(
                         (e) => DropdownMenuItem(
@@ -110,7 +116,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<Product>(
-                  value: invoiceProvider.selectedProduct,
+                  initialValue: invoiceProvider.selectedProduct,
                   items: invoiceProvider.products
                       .map(
                         (e) => DropdownMenuItem(
