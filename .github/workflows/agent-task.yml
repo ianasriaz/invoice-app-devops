@@ -1,0 +1,184 @@
+name: Agent Task Flow
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_description:
+        description: 'Describe the change (e.g., Change splash background to black)'
+        required: true
+        type: string
+
+jobs:
+  trello-todo:
+    runs-on: ubuntu-latest
+    name: Trello -> Todo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Mark task as TODO in Trello
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          BUILD_STATUS: todo
+          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  trello-inprogress:
+    runs-on: ubuntu-latest
+    name: Trello -> In Progress
+    needs: trello-todo
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Mark task as In Progress in Trello
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          BUILD_STATUS: inprogress
+          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  test-and-build:
+    runs-on: ubuntu-latest
+    needs: trello-inprogress
+    name: Test & Build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Format check (non-blocking)
+        run: |
+          dart format --output=none . || true
+
+      - name: Analyze code (non-fatal warnings)
+        run: dart analyze .
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build web
+        run: flutter build web --release --dart-define=FLAVOR=production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+          retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test-and-build
+    name: Deploy to Firebase Hosting
+    environment:
+      name: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: gdgcloud-480509
+          channelId: live
+
+  trello-success:
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: success()
+    name: Trello -> Success
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Mark task as Done in Trello
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          BUILD_STATUS: success
+          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  trello-failure:
+    runs-on: ubuntu-latest
+    needs: [deploy, test-and-build]
+    if: failure()
+    name: Trello -> Failure
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Mark task as Failed in Trello
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          BUILD_STATUS: failure
+          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
