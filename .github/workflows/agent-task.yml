@@ -7,6 +7,10 @@ on:
         description: 'Describe the change (e.g., Change splash background to black)'
         required: true
         type: string
+      card_id:
+        description: 'Existing Trello card ID (optional)'
+        required: false
+        type: string
 
 jobs:
   trello-todo:
@@ -35,6 +39,8 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
           GITHUB_ACTOR: ${{ github.actor }}
+          CARD_ID: ${{ github.event.inputs.card_id }}
+          CARD_ID: ${{ github.event.inputs.card_id }}
 
   trello-inprogress:
     runs-on: ubuntu-latest
@@ -167,6 +173,7 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
           GITHUB_ACTOR: ${{ github.actor }}
+          CARD_ID: ${{ github.event.inputs.card_id }}
 
   trello-failure:
     runs-on: ubuntu-latest
@@ -196,3 +203,4 @@ jobs:
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
           GITHUB_ACTOR: ${{ github.actor }}
+          CARD_ID: ${{ github.event.inputs.card_id }}

@@ -8,6 +8,7 @@ const TRELLO_BOARD_ID = process.env.TRELLO_BOARD_ID;
 const TRELLO_TODO_LIST_ID = process.env.TRELLO_TODO_LIST_ID;
 const TRELLO_DONE_LIST_ID = process.env.TRELLO_DONE_LIST_ID;
 const TRELLO_INPROGRESS_LIST_ID = process.env.TRELLO_INPROGRESS_LIST_ID;
+const CARD_ID = process.env.CARD_ID;
 
 const BUILD_STATUS = process.env.BUILD_STATUS; // 'todo' | 'inprogress' | 'success' | 'failure'
 const TASK_DESCRIPTION = process.env.TASK_DESCRIPTION;
@@ -55,6 +56,20 @@ function makeRequest(method, path, body = null) {
 }
 
 async function findExistingCard() {
+  if (CARD_ID) {
+    try {
+      const response = await makeRequest(
+        'GET',
+        `/1/cards/${CARD_ID}?key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}`
+      );
+      if (response.status === 200 && response.data) {
+        return response.data;
+      }
+    } catch (error) {
+      console.error('Error fetching card by CARD_ID:', error);
+    }
+  }
+
   try {
     const response = await makeRequest(
       'GET',
