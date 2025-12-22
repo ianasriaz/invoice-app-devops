@@ -40,7 +40,6 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
           GITHUB_ACTOR: ${{ github.actor }}
           CARD_ID: ${{ github.event.inputs.card_id }}
-          CARD_ID: ${{ github.event.inputs.card_id }}
 
   trello-inprogress:
     runs-on: ubuntu-latest
