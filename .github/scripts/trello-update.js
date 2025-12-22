@@ -9,13 +9,14 @@ const TRELLO_TODO_LIST_ID = process.env.TRELLO_TODO_LIST_ID;
 const TRELLO_DONE_LIST_ID = process.env.TRELLO_DONE_LIST_ID;
 const TRELLO_INPROGRESS_LIST_ID = process.env.TRELLO_INPROGRESS_LIST_ID;
 
-const BUILD_STATUS = process.env.BUILD_STATUS; // 'success' or 'failure'
+const BUILD_STATUS = process.env.BUILD_STATUS; // 'todo' | 'inprogress' | 'success' | 'failure'
+const TASK_DESCRIPTION = process.env.TASK_DESCRIPTION;
 const GITHUB_SHA = process.env.GITHUB_SHA;
 const GITHUB_REF = process.env.GITHUB_REF;
 const GITHUB_ACTOR = process.env.GITHUB_ACTOR;
 
 const CARD_NAME = `Build #${GITHUB_SHA.substring(0, 7)} - ${GITHUB_REF.split('/').pop()}`;
-const CARD_DESC = `Build Status: ${BUILD_STATUS.toUpperCase()}\nCommit: ${GITHUB_SHA}\nBranch: ${GITHUB_REF}\nActor: ${GITHUB_ACTOR}\nTimestamp: ${new Date().toISOString()}`;
+const CARD_DESC = `Build Status: ${BUILD_STATUS.toUpperCase()}\nCommit: ${GITHUB_SHA}\nBranch: ${GITHUB_REF}\nActor: ${GITHUB_ACTOR}\nTimestamp: ${new Date().toISOString()}${TASK_DESCRIPTION ? `\nTask: ${TASK_DESCRIPTION}` : ''}`;
 
 function makeRequest(method, path, body = null) {
   return new Promise((resolve, reject) => {
@@ -100,10 +101,20 @@ async function main() {
 
     // Determine target list
     let targetListId;
-    if (BUILD_STATUS === 'success') {
-      targetListId = TRELLO_DONE_LIST_ID;
-    } else {
-      targetListId = TRELLO_INPROGRESS_LIST_ID;
+    switch (BUILD_STATUS) {
+      case 'todo':
+        targetListId = TRELLO_TODO_LIST_ID;
+        break;
+      case 'inprogress':
+        targetListId = TRELLO_INPROGRESS_LIST_ID;
+        break;
+      case 'success':
+        targetListId = TRELLO_DONE_LIST_ID;
+        break;
+      case 'failure':
+      default:
+        targetListId = TRELLO_INPROGRESS_LIST_ID;
+        break;
     }
 
     // Find existing card or create new one

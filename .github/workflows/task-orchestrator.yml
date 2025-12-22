@@ -1,0 +1,78 @@
+name: Task Orchestrator
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_description:
+        description: 'Describe the task (e.g., Change splash background to black)'
+        required: true
+        type: string
+      deploy:
+        description: 'Run build + deploy after task?'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  trello-todo:
+    runs-on: ubuntu-latest
+    name: Add task to Trello (Todo)
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Mark task as TODO in Trello
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          BUILD_STATUS: todo
+          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  trello-inprogress:
+    runs-on: ubuntu-latest
+    name: Mark Trello In Progress
+    needs: trello-todo
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Move task to In Progress in Trello
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
+          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          BUILD_STATUS: inprogress
+          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  run-pipeline:
+    needs: trello-inprogress
+    uses: ./.github/workflows/ci-deploy.yml
+    with:
+      deploy: ${{ github.event.inputs.deploy || true }}
+      branch: ${{ github.ref }}
+    secrets: inherit
