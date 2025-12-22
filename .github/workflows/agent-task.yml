@@ -4,75 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       task_description:
-        description: 'Describe the change (e.g., Change splash background to black)'
+        description: 'Describe the change (e.g., Feature: Signup page)'
         required: true
         type: string
       card_id:
-        description: 'Existing Trello card ID (optional)'
-        required: false
+        description: 'Existing Trello card ID'
+        required: true
         type: string
 
 jobs:
-  trello-todo:
-    runs-on: ubuntu-latest
-    name: Trello -> Todo
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Mark task as TODO in Trello
-        run: node .github/scripts/trello-update.js
-        env:
-          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
-          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
-          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
-          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
-          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
-          BUILD_STATUS: todo
-          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_ACTOR: ${{ github.actor }}
-          CARD_ID: ${{ github.event.inputs.card_id }}
-
-  trello-inprogress:
-    runs-on: ubuntu-latest
-    name: Trello -> In Progress
-    needs: code-confirm
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Mark task as In Progress in Trello
-        run: node .github/scripts/trello-update.js
-        env:
-          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
-          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
-          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
-          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
-          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
-          BUILD_STATUS: inprogress
-          TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_REF: ${{ github.ref }}
-          GITHUB_ACTOR: ${{ github.actor }}
-
   code-confirm:
     runs-on: ubuntu-latest
-    name: Confirm code pushed
-    needs: trello-todo
+    name: Confirm code pushed (from Ready to Ship)
     environment:
       name: code-ready
     steps:
@@ -80,12 +23,14 @@ jobs:
         run: |
           echo "Commit: $GITHUB_SHA"
           echo "Ref: $GITHUB_REF"
-      - name: Confirm code source noted
-        run: echo "Proceed after verifying code is pushed."
+      - name: Log Trello card info
+        run: |
+          echo "Operating on Trello card: ${{ github.event.inputs.card_id }}"
+          echo "Task: ${{ github.event.inputs.task_description }}"
 
   test-and-build:
     runs-on: ubuntu-latest
-    needs: trello-inprogress
+    needs: code-confirm
     name: Test & Build
     steps:
       - name: Checkout
@@ -148,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: deploy
     if: success()
-    name: Trello -> Success
+    name: Trello -> Deployed
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -158,16 +103,16 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Mark task as Done in Trello
+      - name: Move card to Deployed
         run: node .github/scripts/trello-update.js
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
           TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
-          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_DEPLOYED_LIST_ID: ${{ secrets.TRELLO_DEPLOYED_LIST_ID }}
           TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
-          BUILD_STATUS: success
+          BUILD_STATUS: deployed
           TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
@@ -188,14 +133,14 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Mark task as Failed in Trello
+      - name: Move card to In Progress (failure)
         run: node .github/scripts/trello-update.js
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
           TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
           TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
-          TRELLO_DONE_LIST_ID: ${{ secrets.TRELLO_DONE_LIST_ID }}
+          TRELLO_DEPLOYED_LIST_ID: ${{ secrets.TRELLO_DEPLOYED_LIST_ID }}
           TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
           BUILD_STATUS: failure
           TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}

@@ -5,12 +5,13 @@ const https = require('https');
 const TRELLO_API_KEY = process.env.TRELLO_API_KEY;
 const TRELLO_TOKEN = process.env.TRELLO_TOKEN;
 const TRELLO_BOARD_ID = process.env.TRELLO_BOARD_ID;
-const TRELLO_TODO_LIST_ID = process.env.TRELLO_TODO_LIST_ID;
-const TRELLO_DONE_LIST_ID = process.env.TRELLO_DONE_LIST_ID;
-const TRELLO_INPROGRESS_LIST_ID = process.env.TRELLO_INPROGRESS_LIST_ID;
+const TRELLO_TODO_LIST_ID = process.env.TRELLO_TODO_LIST_ID; // Plan
+const TRELLO_INPROGRESS_LIST_ID = process.env.TRELLO_INPROGRESS_LIST_ID; // In-Progress
+const TRELLO_READY_LIST_ID = process.env.TRELLO_READY_LIST_ID; // Ready to Ship
+const TRELLO_DEPLOYED_LIST_ID = process.env.TRELLO_DEPLOYED_LIST_ID || process.env.TRELLO_DONE_LIST_ID; // Deployed
 const CARD_ID = process.env.CARD_ID;
 
-const BUILD_STATUS = process.env.BUILD_STATUS; // 'todo' | 'inprogress' | 'success' | 'failure'
+const BUILD_STATUS = process.env.BUILD_STATUS; // 'plan' | 'inprogress' | 'ready' | 'deployed' | 'failure'
 const TASK_DESCRIPTION = process.env.TASK_DESCRIPTION;
 const GITHUB_SHA = process.env.GITHUB_SHA;
 const GITHUB_REF = process.env.GITHUB_REF;
@@ -121,14 +122,17 @@ async function main() {
     // Determine target list
     let targetListId;
     switch (BUILD_STATUS) {
-      case 'todo':
+      case 'plan':
         targetListId = TRELLO_TODO_LIST_ID;
         break;
       case 'inprogress':
         targetListId = TRELLO_INPROGRESS_LIST_ID;
         break;
-      case 'success':
-        targetListId = TRELLO_DONE_LIST_ID;
+      case 'ready':
+        targetListId = TRELLO_READY_LIST_ID || TRELLO_INPROGRESS_LIST_ID;
+        break;
+      case 'deployed':
+        targetListId = TRELLO_DEPLOYED_LIST_ID;
         break;
       case 'failure':
       default:
