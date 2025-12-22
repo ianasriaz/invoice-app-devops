@@ -3,37 +3,49 @@ import 'package:gsheet/models/customer.dart';
 import 'package:gsheet/models/product.dart';
 import 'package:gsheet/providers/invoice_provider.dart';
 import 'package:gsheet/services/firebase_service.dart';
-import 'package:mockito/mockito.dart';
 
-class MockFirebaseService extends Mock implements FirebaseService {}
+class FakeFirebaseService extends Fake implements FirebaseService {
+  FakeFirebaseService({required this.products, required this.customers, required this.signUrl});
+
+  final List<Product> products;
+  final List<Customer> customers;
+  final String signUrl;
+
+  @override
+  Future<Map<String, dynamic>> fetchData() async {
+    return {
+      'products': products,
+      'customers': customers,
+      'signUrl': signUrl,
+    };
+  }
+}
 
 void main() {
   late InvoiceProvider invoiceProvider;
-  late MockFirebaseService mockFirebaseService;
+  late FakeFirebaseService fakeFirebaseService;
+
+  final products = [
+    Product(name: 'Product 1', type: 'Type A', packSize: '10', unitPrice: 100),
+    Product(name: 'Product 2', type: 'Type B', packSize: '20', unitPrice: 200),
+  ];
+  final customers = [
+    Customer(name: 'Customer 1', address: 'Address 1'),
+    Customer(name: 'Customer 2', address: 'Address 2'),
+  ];
+  final signUrl = 'http://example.com/sign.png';
 
   setUp(() {
-    mockFirebaseService = MockFirebaseService();
-    invoiceProvider = InvoiceProvider(firebaseService: mockFirebaseService);
+    fakeFirebaseService = FakeFirebaseService(
+      products: products,
+      customers: customers,
+      signUrl: signUrl,
+    );
+    invoiceProvider = InvoiceProvider(firebaseService: fakeFirebaseService);
   });
 
   group('InvoiceProvider', () {
-    final products = [
-      Product(name: 'Product 1', type: 'Type A', packSize: '10', unitPrice: 100),
-      Product(name: 'Product 2', type: 'Type B', packSize: '20', unitPrice: 200),
-    ];
-    final customers = [
-      Customer(name: 'Customer 1', address: 'Address 1'),
-      Customer(name: 'Customer 2', address: 'Address 2'),
-    ];
-    final signUrl = 'http://example.com/sign.png';
-
     test('loadInitialData should fetch data and update state', () async {
-      when(mockFirebaseService.fetchData()).thenAnswer((_) async => {
-            'products': products,
-            'customers': customers,
-            'signUrl': signUrl,
-          });
-
       await invoiceProvider.loadInitialData();
 
       expect(invoiceProvider.products, products);
