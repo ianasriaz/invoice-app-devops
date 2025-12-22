@@ -76,7 +76,6 @@ class _InvoicesListScreenState extends State<InvoicesListScreen> {
       case InvoiceFilterStatus.unpaid:
         return fi.InvoiceStatus.draft;
       case InvoiceFilterStatus.draft:
-      default:
         return fi.InvoiceStatus.draft;
     }
   }
