@@ -108,10 +108,11 @@ jobs:
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
-          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
-          TRELLO_DEPLOYED_LIST_ID: ${{ secrets.TRELLO_DEPLOYED_LIST_ID }}
-          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
           BUILD_STATUS: deployed
           TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
           GITHUB_SHA: ${{ github.sha }}
@@ -138,10 +139,11 @@ jobs:
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
           TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
-          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
-          TRELLO_TODO_LIST_ID: ${{ secrets.TRELLO_TODO_LIST_ID }}
-          TRELLO_DEPLOYED_LIST_ID: ${{ secrets.TRELLO_DEPLOYED_LIST_ID }}
-          TRELLO_INPROGRESS_LIST_ID: ${{ secrets.TRELLO_INPROGRESS_LIST_ID }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
           BUILD_STATUS: failure
           TASK_DESCRIPTION: ${{ github.event.inputs.task_description }}
           GITHUB_SHA: ${{ github.sha }}
