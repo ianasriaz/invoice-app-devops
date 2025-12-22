@@ -15,7 +15,11 @@ const GITHUB_SHA = process.env.GITHUB_SHA;
 const GITHUB_REF = process.env.GITHUB_REF;
 const GITHUB_ACTOR = process.env.GITHUB_ACTOR;
 
-const CARD_NAME = `Build #${GITHUB_SHA.substring(0, 7)} - ${GITHUB_REF.split('/').pop()}`;
+const branchName = GITHUB_REF.split('/').pop();
+const shortSha = GITHUB_SHA.substring(0, 7);
+const CARD_NAME = TASK_DESCRIPTION
+  ? `${TASK_DESCRIPTION} | ${branchName}@${shortSha}`
+  : `Build #${shortSha} - ${branchName}`;
 const CARD_DESC = `Build Status: ${BUILD_STATUS.toUpperCase()}\nCommit: ${GITHUB_SHA}\nBranch: ${GITHUB_REF}\nActor: ${GITHUB_ACTOR}\nTimestamp: ${new Date().toISOString()}${TASK_DESCRIPTION ? `\nTask: ${TASK_DESCRIPTION}` : ''}`;
 
 function makeRequest(method, path, body = null) {
