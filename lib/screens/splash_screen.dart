@@ -66,7 +66,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.purple,
+      backgroundColor: const Color(0xFF4F46E5),
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 500),
         child: _showButtons ? _buildSecondScreen() : _buildFirstScreen(),
@@ -77,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildFirstScreen() {
     return Container(
       key: const ValueKey('first'),
-      color: Colors.purple,
+      color: const Color(0xFF4F46E5),
       child: Center(
         child: FadeTransition(
           opacity: _fadeAnimation,
