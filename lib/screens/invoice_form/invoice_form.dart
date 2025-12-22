@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gsheet/constants/app_colors.dart';
 
 import 'package:gsheet/models/customer.dart';
 import 'package:gsheet/models/product.dart';
@@ -53,7 +54,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
         }
 
         if (invoiceProvider.isBusy) {
-          return const Center(
+          return Center(
               child: CircularProgressIndicator(
             valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
           ));
@@ -73,7 +74,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
               children: [
                 DropdownButtonFormField<Customer>(
                   isExpanded: true,
-                  initialValue: invoiceProvider.selectedCustomer,
+                  value: invoiceProvider.selectedCustomer,
                   items: invoiceProvider.customers
                       .map(
                         (e) => DropdownMenuItem(
@@ -109,7 +110,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<Product>(
-                  initialValue: invoiceProvider.selectedProduct,
+                  value: invoiceProvider.selectedProduct,
                   items: invoiceProvider.products
                       .map(
                         (e) => DropdownMenuItem(

@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
 
 import 'package:gsheet/models/client.dart';
 import 'package:gsheet/models/freelance_invoice.dart';
@@ -248,7 +247,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
                         }
 
                         return DropdownButtonFormField<String>(
-                          initialValue: selectedServiceId,
+                          value: selectedServiceId,
                           decoration: InputDecoration(
                             labelText: 'Select Service',
                             prefixIcon: const Icon(Icons.work_rounded),
@@ -1036,7 +1035,7 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
             }
 
             return DropdownButtonFormField<String>(
-              initialValue: _selectedClient?.id,
+              value: _selectedClient?.id,
               decoration: InputDecoration(
                 labelText: 'Select Client',
                 prefixIcon: Icon(Icons.person_rounded, color: _brandColor),
