@@ -179,7 +179,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
             onTap: () async {
               Navigator.pop(context);
-              final url = Uri.parse('YOUR_TRELLO_BOARD_URL_HERE');
+              final url = Uri.parse('https://trello.com/b/???/invoice-app-devops');
               if (await canLaunchUrl(url)) {
                 await launchUrl(url, mode: LaunchMode.externalApplication);
               } else {
