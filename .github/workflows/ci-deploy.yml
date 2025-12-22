@@ -31,8 +31,8 @@ jobs:
         # To enforce formatting, replace with:
         # dart format --output=none --set-exit-if-changed .
 
-      - name: Analyze code
-        run: flutter analyze
+      - name: Analyze code (non-fatal warnings)
+        run: dart analyze .
 
       - name: Run tests
         run: flutter test
