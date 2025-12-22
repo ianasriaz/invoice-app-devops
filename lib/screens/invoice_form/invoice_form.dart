@@ -80,7 +80,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
               children: [
                 DropdownButtonFormField<Customer>(
                   isExpanded: true,
-                  initialValue: invoiceProvider.selectedCustomer,
+                  value: invoiceProvider.selectedCustomer,
                   items: invoiceProvider.customers
                       .map(
                         (e) => DropdownMenuItem(
@@ -116,7 +116,7 @@ class _InvoiceFormState extends State<InvoiceForm> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<Product>(
-                  initialValue: invoiceProvider.selectedProduct,
+                  value: invoiceProvider.selectedProduct,
                   items: invoiceProvider.products
                       .map(
                         (e) => DropdownMenuItem(
