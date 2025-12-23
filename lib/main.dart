@@ -59,6 +59,7 @@ class MyApp extends StatelessWidget {
       cardColor: AppColors.lightCard,
       dividerColor: AppColors.lightBorder,
       useMaterial3: true,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
       colorScheme: ColorScheme.light(
         primary: AppColors.primary,
         secondary: AppColors.secondary,
@@ -127,11 +128,29 @@ class MyApp extends StatelessWidget {
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      cardTheme: CardTheme(
-        color: AppColors.lightCard,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.lightCard,
+        contentTextStyle: GoogleFonts.inter(
+          color: AppColors.lightText,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      dialogTheme: DialogTheme(
+        backgroundColor: AppColors.lightSurface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titleTextStyle: GoogleFonts.inter(
+          color: AppColors.lightText,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+        contentTextStyle: GoogleFonts.inter(
+          color: AppColors.lightText,
+          fontSize: 15,
+          fontWeight: FontWeight.w400,
         ),
       ),
       iconTheme: const IconThemeData(color: Colors.black87),
@@ -139,6 +158,18 @@ class MyApp extends StatelessWidget {
         bodyColor: AppColors.lightText,
         displayColor: AppColors.lightText,
       ),
+      dividerTheme: DividerThemeData(
+        color: AppColors.lightBorder,
+        thickness: 1,
+        space: 24,
+      ),
+      pageTransitionsTheme: const PageTransitionsTheme(builders: {
+        TargetPlatform.android: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.linux: FadeUpwardsPageTransitionsBuilder(),
+        TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.windows: FadeUpwardsPageTransitionsBuilder(),
+      }),
     );
   }
 }
