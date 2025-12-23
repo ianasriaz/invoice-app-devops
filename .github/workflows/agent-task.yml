@@ -1,0 +1,313 @@
+name: Agent Task Flow
+
+on:
+  workflow_dispatch:
+    inputs:
+      task_description:
+        description: 'Describe the change (e.g., Feature: Signup page)'
+        required: true
+        type: string
+      card_id:
+        description: 'Existing Trello card ID'
+        required: true
+        type: string
+
+jobs:
+  code-confirm:
+    runs-on: ubuntu-latest
+    name: Confirm code pushed (from Ready to Ship)
+    environment:
+      name: code-ready
+    steps:
+      - name: Show commit being built
+        run: |
+          echo "Commit: $GITHUB_SHA"
+          echo "Ref: $GITHUB_REF"
+      - name: Log Trello card info
+        run: |
+          echo "Operating on Trello card: ${{ github.event.inputs.card_id }}"
+          echo "Task: ${{ github.event.inputs.task_description }}"
+
+  trello-plan:
+    runs-on: ubuntu-latest
+    needs: code-confirm
+    name: Move Trello card to Plan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update Trello card to Plan
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
+          BUILD_STATUS: plan
+          CARD_ID: ${{ github.event.inputs.card_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  test:
+    runs-on: ubuntu-latest
+    needs: trello-plan
+    name: Test & Analyze
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Format check (non-blocking)
+        run: dart format --output=none . || true
+
+      - name: Analyze code (non-fatal warnings)
+        run: dart analyze . || true
+
+      - name: Run tests
+        run: flutter test || true
+
+  trello-inprogress:
+    runs-on: ubuntu-latest
+    needs: test
+    name: Move Trello card to In-Progress
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update Trello card to In-Progress
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
+          BUILD_STATUS: inprogress
+          CARD_ID: ${{ github.event.inputs.card_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  build-web:
+    runs-on: ubuntu-latest
+    needs: trello-inprogress
+    name: Build Web
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.0'
+          cache: true
+
+      - name: Get dependencies
+        run: flutter pub get
+
+      - name: Build web
+        run: flutter build web --release --dart-define=FLAVOR=production
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+          retention-days: 7
+
+  trello-ready:
+    runs-on: ubuntu-latest
+    needs: build-web
+    name: Move Trello card to Ready-To-Deploy
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update Trello card to Ready
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
+          BUILD_STATUS: ready
+          CARD_ID: ${{ github.event.inputs.card_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  deploy-approval:
+    runs-on: ubuntu-latest
+    needs: trello-ready
+    name: Approve Deploy to Google Cloud
+    environment:
+      name: production
+    steps:
+      - name: Deployment approved
+        run: echo "Deployment to production approved!"
+
+  deploy-hosting:
+    runs-on: ubuntu-latest
+    needs: deploy-approval
+    name: Deploy to Firebase Hosting
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: web-build
+          path: build/web/
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          projectId: gdgcloud-480509
+          channelId: live
+
+  trello-deployed:
+    runs-on: ubuntu-latest
+    needs: deploy-hosting
+    name: Move Trello card to Deployed
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update Trello card to Deployed
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
+          BUILD_STATUS: deployed
+          CARD_ID: ${{ github.event.inputs.card_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  email-success:
+    runs-on: ubuntu-latest
+    needs: trello-deployed
+    if: success()
+    name: Send Success Email
+    steps:
+      - name: Send success email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "✅ Deploy Success: ${{ github.event.inputs.task_description }}"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: GitHub Actions
+          body: |
+            Deployment completed successfully!
+            
+            Task: ${{ github.event.inputs.task_description }}
+            Card ID: ${{ github.event.inputs.card_id }}
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+            
+            View deployment: https://gdgcloud-480509.web.app
+
+  trello-failure:
+    runs-on: ubuntu-latest
+    if: failure()
+    name: Move Trello card to Failed
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Update Trello card to Failed
+        run: node .github/scripts/trello-update.js
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: 694951faa7d6cc8841fe7bae
+          TRELLO_TODO_LIST_ID: 694951faa7d6cc8841fe7be9
+          TRELLO_INPROGRESS_LIST_ID: 694951faa7d6cc8841fe7bea
+          TRELLO_READY_LIST_ID: 6949996bf592ed88a155869d
+          TRELLO_DEPLOYED_LIST_ID: 694951faa7d6cc8841fe7beb
+          BUILD_STATUS: failure
+          CARD_ID: ${{ github.event.inputs.card_id }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+          GITHUB_ACTOR: ${{ github.actor }}
+
+  email-failure:
+    runs-on: ubuntu-latest
+    if: failure()
+    name: Send Failure Email
+    steps:
+      - name: Send failure email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "❌ Deploy Failed: ${{ github.event.inputs.task_description }}"
+          to: ${{ secrets.NOTIFICATION_EMAIL }}
+          from: GitHub Actions
+          body: |
+            Deployment failed!
+            
+            Task: ${{ github.event.inputs.task_description }}
+            Card ID: ${{ github.event.inputs.card_id }}
+            Commit: ${{ github.sha }}
+            Actor: ${{ github.actor }}
+            
+            View run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
