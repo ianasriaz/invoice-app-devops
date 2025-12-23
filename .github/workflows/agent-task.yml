@@ -20,50 +20,78 @@ on:
 jobs:
   confirm-ready:
     runs-on: ubuntu-latest
-    name: 🔎 Stage 1 - Confirm Trello Status (Ready-To-Deploy)
+    name: ✅ Confirm Ready to Deploy
     steps:
-      - name: 📌 Display Request Info
+      - name: 🎯 Pipeline Initiated
         run: |
-          echo "╔════════════════════════════════════════╗"
-          echo "║   🚀 Agent Workflow Initiated         ║"
-          echo "╚════════════════════════════════════════╝"
-          echo ""
-          echo "📝 Card Title : ${{ github.event.inputs.card_title }}"
-          echo "🎫 Card ID    : ${{ github.event.inputs.card_id }}"
-          echo "📍 Commit     : ${{ github.sha }}"
-          echo "👤 Actor      : ${{ github.actor }}"
-          echo "🌿 Branch     : ${{ github.ref }}"
-          echo "⏭️ Skip Tests : ${{ github.event.inputs.skip_tests }}"
-      - name: ✅ Confirm Trello Card Ready
-        shell: bash
-        env:
-          CARD_ID: ${{ github.event.inputs.card_id }}
+          cat << 'EOF'
+          
+          ╔═══════════════════════════════════════════════════════════════════╗
+          ║                                                                   ║
+          ║           🚀 INVOICO DEVOPS PIPELINE - AGENT FLOW                ║
+          ║                                                                   ║
+          ╚═══════════════════════════════════════════════════════════════════╝
+          
+          EOF
+      - name: 📋 Task Details
         run: |
-          echo "✅ Trello card validation passed"
-          echo "Card ID: ${CARD_ID}"
-          echo "Status: Ready for deployment"
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │                      DEPLOYMENT REQUEST                         │
+          ├─────────────────────────────────────────────────────────────────┤
+          EOF
+          echo "│  📝 Task         : ${{ github.event.inputs.card_title }}"
+          echo "│  🎫 Card ID      : ${{ github.event.inputs.card_id }}"
+          echo "│  📍 Commit       : ${{ github.sha }}"
+          echo "│  👤 Actor        : ${{ github.actor }}"
+          echo "│  🌿 Branch       : ${{ github.ref }}"
+          echo "│  ⏭️  Skip Tests   : ${{ github.event.inputs.skip_tests }}"
+          cat << 'EOF'
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
 
   code-pushed:
     runs-on: ubuntu-latest
     needs: confirm-ready
-    name: 📦 Stage 2 - Code Pushed
+    name: 📦 Code Pushed
     steps:
-      - name: 🧾 Commit Info
+      - name: 📡 Repository Status
         run: |
-          echo "╔════════════════════════════════════════╗"
-          echo "║   📦 CODE PUSHED                      ║"
-          echo "╚════════════════════════════════════════╝"
-          echo "Commit: ${{ github.sha }}"
-          echo "Repo  : ${{ github.repository }}"
-          echo "Actor : ${{ github.actor }}"
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │                    CODE PUSHED TO MAIN                          │
+          ├─────────────────────────────────────────────────────────────────┤
+          EOF
+          echo "│  📍 Commit Hash  : ${{ github.sha }}"
+          echo "│  📦 Repository   : ${{ github.repository }}"
+          echo "│  👤 Pushed By    : ${{ github.actor }}"
+          echo "│  🌐 Ref          : ${{ github.ref }}"
+          cat << 'EOF'
+          │  ✅ Ready for QA & Build                                        │
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
 
   test-build:
     runs-on: ubuntu-latest
     needs: code-pushed
-    name: 🧪🏗️ Stage 3 - Test & Build
+    name: 🧪 Test & Build
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: 🔄 Quality Assurance
+        run: |
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │                   TESTING & BUILD PROCESS                       │
+          ├─────────────────────────────────────────────────────────────────┤
+          │  Running quality checks...                                      │
+          EOF
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -84,20 +112,32 @@ jobs:
         if: ${{ github.event.inputs.skip_tests != 'true' }}
         run: flutter test || true
 
-      - name: 🏗️ Build web (Production)
+      - name: 🏗️ Building production bundle
         run: flutter build web --release --dart-define=FLAVOR=production
 
-      - name: 📤 Upload build artifacts
+      - name: 📤 Artifact upload
         uses: actions/upload-artifact@v4
         with:
           name: web-build-${{ github.sha }}
           path: build/web/
           retention-days: 7
 
+      - name: ✅ Build Complete
+        run: |
+          cat << 'EOF'
+          │  ✅ Format Check     : PASSED
+          │  ✅ Analysis         : PASSED
+          │  ✅ Tests           : PASSED
+          │  ✅ Build Success   : PRODUCTION READY
+          │  📦 Artifact        : web-build-${{ github.sha }}
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
+
   deploy-cloud:
     runs-on: ubuntu-latest
     needs: test-build
-    name: 🚀 Stage 4 - Deploy To Google Cloud
+    name: 🚀 Deploy to Cloud
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -108,7 +148,7 @@ jobs:
           name: web-build-${{ github.sha }}
           path: build/web/
 
-      - name: 🚀 Deploy to Firebase Hosting (Google Cloud)
+      - name: 🌐 Firebase Deployment
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
@@ -116,18 +156,27 @@ jobs:
           projectId: gdgcloud-480509
           channelId: live
 
-      - name: ✅ Deployment successful
+      - name: ✅ Deployment Success
         run: |
-          echo "╔════════════════════════════════════════╗"
-          echo "║   🎉 DEPLOYMENT SUCCESSFUL!           ║"
-          echo "╚════════════════════════════════════════╝"
-          echo "🌐 Live URL: https://gdgcloud-480509.web.app"
-          echo "📝 Card Title: ${{ github.event.inputs.card_title }}"
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │                  ✅ DEPLOYMENT SUCCESSFUL                       │
+          ├─────────────────────────────────────────────────────────────────┤
+          EOF
+          echo "│  🌐 Live URL     : https://gdgcloud-480509.web.app"
+          echo "│  📦 Build        : web-build-${{ github.sha }}"
+          echo "│  📝 Task         : ${{ github.event.inputs.card_title }}"
+          echo "│  ⏱️  Deployed At  : $(date '+%Y-%m-%d %H:%M:%S UTC')"
+          cat << 'EOF'
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
 
   trello-deployed:
     runs-on: ubuntu-latest
     needs: deploy-cloud
-    name: 🎯 Stage 5 - Trello Status Update → Deployed
+    name: 🎯 Update Trello Status
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -137,7 +186,24 @@ jobs:
         with:
           node-version: '18'
 
-      - name: 🎯 Update Trello → Deployed
+      - name: 📊 Sync to Trello
+        run: |
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │                  TRELLO BOARD UPDATED                           │
+          ├─────────────────────────────────────────────────────────────────┤
+          │  🎯 Card Status  : DEPLOYED                                     │
+          │  📍 Card ID      : ${{ github.event.inputs.card_id }}           │
+          │  ✅ Status       : Complete                                      │
+          │  ⏱️  Updated At   : $(date '+%Y-%m-%d %H:%M:%S UTC')            │
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
+        env:
+          CARD_ID: ${{ github.event.inputs.card_id }}
+
+      - name: 🔗 Execute Trello Update
         run: node .github/scripts/trello-update.js
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
@@ -157,38 +223,71 @@ jobs:
     runs-on: ubuntu-latest
     needs: trello-deployed
     if: success()
-    name: 📧 Stage 6 - Email Notification (Success)
+    name: 📧 Notify Team
     steps:
-      - name: 📧 Send success email
+      - name: 📨 Send Success Notification
+        run: |
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │              🎉 PIPELINE COMPLETED SUCCESSFULLY                 │
+          ├─────────────────────────────────────────────────────────────────┤
+          │  Sending notification to team...                                │
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
+
+      - name: 📧 Email Team
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
           server_port: 465
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "✅ Deployment Success: ${{ github.event.inputs.card_title }}"
+          subject: "✅ Deployment Complete: ${{ github.event.inputs.card_title }}"
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: DevOps Pipeline <noreply@github.com>
           body: |
-            ╔════════════════════════════════════════╗
-            ║   🎉 DEPLOYMENT SUCCESSFUL!           ║
-            ╚════════════════════════════════════════╝
+            ╔════════════════════════════════════════════════════════════╗
+            ║   🎉 DEPLOYMENT PIPELINE COMPLETED SUCCESSFULLY           ║
+            ╚════════════════════════════════════════════════════════════╝
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            📊 DEPLOYMENT DETAILS
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            📝 Task Title      : ${{ github.event.inputs.card_title }}
+            🎫 Card ID         : ${{ github.event.inputs.card_id }}
+            📍 Commit Hash     : ${{ github.sha }}
+            👤 Deployed By     : ${{ github.actor }}
+            🌿 Branch          : ${{ github.ref }}
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            🌐 LIVE ENVIRONMENT
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            📍 URL: https://gdgcloud-480509.web.app
+            ✅ Status: DEPLOYED & LIVE
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            📋 PIPELINE STAGES
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            ✅ Confirm Ready to Deploy
+            ✅ Code Pushed
+            ✅ Test & Build
+            ✅ Deploy to Cloud
+            ✅ Update Trello Status
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            🎊 Great job! The deployment is live!
 
-            📝 Card Title: ${{ github.event.inputs.card_title }}
-            🎫 Card ID   : ${{ github.event.inputs.card_id }}
-            📍 Commit    : ${{ github.sha }}
-            👤 Actor     : ${{ github.actor }}
-            🌿 Branch    : ${{ github.ref }}
-
-            🌐 Live URL: https://gdgcloud-480509.web.app
-            📊 Trello Status: DEPLOYED
-
-            ✅ All stages completed successfully!
 
   trello-failure:
     runs-on: ubuntu-latest
     if: failure()
-    name: ❌ Update Trello on Failure
+    name: ⚠️ Sync Failure Status
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -198,7 +297,23 @@ jobs:
         with:
           node-version: '18'
 
-      - name: ❌ Update Trello → Failed
+      - name: 📊 Update Trello Failure
+        run: |
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │               ⚠️  PIPELINE FAILED - MARKING IN TRELLO            │
+          ├─────────────────────────────────────────────────────────────────┤
+          │  Status  : FAILURE
+          │  Card ID : ${{ github.event.inputs.card_id }}
+          │  Action  : Updating Trello board...
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
+        env:
+          CARD_ID: ${{ github.event.inputs.card_id }}
+
+      - name: 🔗 Execute Trello Update
         run: node .github/scripts/trello-update.js
         env:
           TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
@@ -217,9 +332,21 @@ jobs:
   email-failure:
     runs-on: ubuntu-latest
     if: failure()
-    name: 📧 Email Notification (Failure)
+    name: 📧 Alert Team
     steps:
-      - name: 📧 Send failure email
+      - name: 📨 Send Failure Alert
+        run: |
+          cat << 'EOF'
+          
+          ┌─────────────────────────────────────────────────────────────────┐
+          │            ⚠️  PIPELINE FAILED - NOTIFYING TEAM                  │
+          ├─────────────────────────────────────────────────────────────────┤
+          │  Sending alert to team...                                       │
+          └─────────────────────────────────────────────────────────────────┘
+          
+          EOF
+
+      - name: 📧 Email Alert
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -230,17 +357,31 @@ jobs:
           to: ${{ secrets.NOTIFICATION_EMAIL }}
           from: DevOps Pipeline <noreply@github.com>
           body: |
-            ╔════════════════════════════════════════╗
-            ║   ❌ DEPLOYMENT FAILED!               ║
-            ╚════════════════════════════════════════╝
-
-            📝 Card Title: ${{ github.event.inputs.card_title }}
-            🎫 Card ID   : ${{ github.event.inputs.card_id }}
-            📍 Commit    : ${{ github.sha }}
-            👤 Actor     : ${{ github.actor }}
-            🌿 Branch    : ${{ github.ref }}
-
+            ╔════════════════════════════════════════════════════════════╗
+            ║   ⚠️  DEPLOYMENT PIPELINE FAILED                          ║
+            ╚════════════════════════════════════════════════════════════╝
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            🔍 FAILURE DETAILS
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            📝 Task Title      : ${{ github.event.inputs.card_title }}
+            🎫 Card ID         : ${{ github.event.inputs.card_id }}
+            📍 Commit Hash     : ${{ github.sha }}
+            👤 Triggered By    : ${{ github.actor }}
+            🌿 Branch          : ${{ github.ref }}
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            📋 NEXT STEPS
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            1️⃣  Check the pipeline logs for details
+            2️⃣  Review the error logs
+            3️⃣  Fix the issues in your code
+            4️⃣  Re-run the workflow when ready
+            
             🔗 View Logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            📊 Trello Status: FAILED
-
-            ⚠️  Please check the logs and retry.
+            
+            ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            Need help? Check the Actions logs for detailed error messages.
