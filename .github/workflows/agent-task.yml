@@ -246,8 +246,8 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "✅ Deployment Complete: ${{ github.event.inputs.card_title }}"
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          from: DevOps Pipeline <noreply@github.com>
+          to: ${{ secrets.NOTIFY_EMAIL_TO }}
+          from: ${{ secrets.NOTIFY_EMAIL_FROM }}
           body: |
             ╔════════════════════════════════════════════════════════════╗
             ║   🎉 DEPLOYMENT PIPELINE COMPLETED SUCCESSFULLY           ║
@@ -356,8 +356,8 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "❌ Deployment Failed: ${{ github.event.inputs.card_title }}"
-          to: ${{ secrets.NOTIFICATION_EMAIL }}
-          from: DevOps Pipeline <noreply@github.com>
+          to: ${{ secrets.NOTIFY_EMAIL_TO }}
+          from: ${{ secrets.NOTIFY_EMAIL_FROM }}
           body: |
             ╔════════════════════════════════════════════════════════════╗
             ║   ⚠️  DEPLOYMENT PIPELINE FAILED                          ║
