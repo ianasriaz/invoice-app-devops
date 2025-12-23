@@ -46,7 +46,7 @@ jobs:
           curl -s "https://api.trello.com/1/cards/${CARD_ID}?key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}" -o card.json
           echo "📦 Card payload fetched"
           python - <<'PY'
-import json,sys
+import os,json,sys
 data=json.load(open('card.json'))
 id_list=data.get('idList')
 name=data.get('name')
