@@ -189,24 +189,15 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'icons/Logo.png',
-                            fit: BoxFit.contain,
-                            filterQuality: FilterQuality.high,
-                            width: 56,
-                            height: 56,
-                            // Fallback to icon if asset is missing
-                            errorBuilder: (context, error, stackTrace) {
-                              final theme = Theme.of(context);
-                              return Icon(
-                                Icons.receipt_long_rounded,
-                                size: 56,
-                                color: theme.colorScheme.primary,
-                              );
-                            },
-                          ),
-                        ),
+                        child: Builder(builder: (context) {
+                          final theme = Theme.of(context);
+                          // Use the same logo icon as Splash Screen 1
+                          return Icon(
+                            Icons.receipt_long_rounded,
+                            size: 56,
+                            color: theme.colorScheme.primary,
+                          );
+                        }),
                       ),
                     ),
                     const SizedBox(height: 24),
