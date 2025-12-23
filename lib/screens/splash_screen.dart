@@ -138,60 +138,65 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildSecondScreen() {
     return Container(
       key: const ValueKey('second'),
-      color: Colors.white,
+      color: const Color(0xFFF8F9FE), // Subtle off-white background
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const SizedBox(height: 20),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      padding: const EdgeInsets.all(22),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 12,
-                            offset: const Offset(0, 6),
+                    // Logo with elevated shadow
+                    PhysicalModel(
+                      color: Colors.white,
+                      elevation: 8,
+                      shadowColor: Colors.black.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF4F46E5).withOpacity(0.1),
+                            width: 2.5,
                           ),
-                        ],
+                        ),
+                        child: Builder(builder: (context) {
+                          final theme = Theme.of(context);
+                          return Icon(
+                            Icons.receipt_long_rounded,
+                            size: 56,
+                            color: theme.colorScheme.primary,
+                          );
+                        }),
                       ),
-                      child: Builder(builder: (context) {
-                        final theme = Theme.of(context);
-                        return Icon(
-                          Icons.receipt_long_rounded,
-                          size: 56,
-                          color: theme.colorScheme.primary,
-                        );
-                      }),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                    // Brand name with enhanced typography
                     const Text(
                       'INVOICO',
                       style: TextStyle(
                         fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                        letterSpacing: 1.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                        letterSpacing: 2.0,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
+                    const SizedBox(height: 12),
+                    const Text(
                       'Professional Invoice Management',
                       style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black.withOpacity(0.6),
-                        letterSpacing: 0.5,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ],
@@ -199,53 +204,87 @@ class _SplashScreenState extends State<SplashScreen>
               ),
               Column(
                 children: [
+                  // Primary Sign In button with gradient
                   SizedBox(
                     width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _goToLogin,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Sign In',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                    height: 56,
+                    child: Builder(
+                      builder: (context) {
+                        final primaryColor = Theme.of(context).colorScheme.primary;
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                primaryColor,
+                                primaryColor.withOpacity(0.85),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.3),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: ElevatedButton(
+                            onPressed: _goToLogin,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ),
+                        );
+                      }
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                  // Secondary Sign Up button with stronger border
                   SizedBox(
                     width: double.infinity,
-                    height: 54,
-                    child: OutlinedButton(
-                      onPressed: _goToSignup,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(
-                            color: Colors.black.withOpacity(0.1), width: 1.5),
-                        foregroundColor: Theme.of(context).colorScheme.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Sign Up',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.primary,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                    height: 56,
+                    child: Builder(
+                      builder: (context) {
+                        final primaryColor = Theme.of(context).colorScheme.primary;
+                        return OutlinedButton(
+                          onPressed: _goToSignup,
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(
+                              color: primaryColor.withOpacity(0.3),
+                              width: 2.0,
+                            ),
+                            foregroundColor: primaryColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Sign Up',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: primaryColor,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        );
+                      }
                     ),
                   ),
                 ],
