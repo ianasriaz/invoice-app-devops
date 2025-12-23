@@ -238,6 +238,7 @@ jobs:
           EOF
 
       - name: 📧 Email Team
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
@@ -347,6 +348,7 @@ jobs:
           EOF
 
       - name: 📧 Email Alert
+        continue-on-error: true
         uses: dawidd6/action-send-mail@v3
         with:
           server_address: smtp.gmail.com
