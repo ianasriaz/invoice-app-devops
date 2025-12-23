@@ -231,22 +231,14 @@ class _SplashScreenState extends State<SplashScreen>
                     width: double.infinity,
                     height: 56,
                     child: Builder(builder: (context) {
-                      final primaryColor =
-                          Theme.of(context).colorScheme.primary;
+                      final shadowColor = const Color(0xFF000000).withOpacity(0.28);
                       return Container(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF4F46E5),
-                              Color(0xFF3730A3),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
+                          color: Colors.black,
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF4F46E5).withOpacity(0.3),
+                              color: shadowColor,
                               blurRadius: 12,
                               offset: const Offset(0, 6),
                             ),
