@@ -230,7 +230,8 @@ class _SplashScreenState extends State<SplashScreen>
                     width: double.infinity,
                     height: 56,
                     child: Builder(builder: (context) {
-                      final primaryColor = Theme.of(context).colorScheme.primary;
+                      final primaryColor =
+                          Theme.of(context).colorScheme.primary;
                       return Container(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -279,7 +280,8 @@ class _SplashScreenState extends State<SplashScreen>
                     width: double.infinity,
                     height: 56,
                     child: Builder(builder: (context) {
-                      final primaryColor = Theme.of(context).colorScheme.primary;
+                      final primaryColor =
+                          Theme.of(context).colorScheme.primary;
                       return OutlinedButton(
                         onPressed: _goToSignup,
                         style: OutlinedButton.styleFrom(
