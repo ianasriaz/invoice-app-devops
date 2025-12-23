@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 
 class SplashScreen extends StatefulWidget {
@@ -65,6 +66,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (_showButtons) {
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ));
+    }
     return Scaffold(
       backgroundColor: const Color(0xFF4F46E5),
       body: AnimatedSwitcher(
@@ -138,7 +146,13 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildSecondScreen() {
     return Container(
       key: const ValueKey('second'),
-      color: const Color(0xFFF8F9FE), // Subtle off-white background
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF5F3FF), Color(0xFFFFFFFF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
@@ -164,9 +178,16 @@ class _SplashScreenState extends State<SplashScreen>
                           color: Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: const Color(0xFF4F46E5).withOpacity(0.1),
+                            color: const Color(0xFF4F46E5).withOpacity(0.08),
                             width: 2.5,
                           ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF4F46E5).withOpacity(0.05),
+                              blurRadius: 20,
+                              spreadRadius: 4,
+                            ),
+                          ],
                         ),
                         child: Builder(builder: (context) {
                           final theme = Theme.of(context);
@@ -185,7 +206,7 @@ class _SplashScreenState extends State<SplashScreen>
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w800,
-                        color: Colors.black87,
+                        color: Color(0xFF1F2937),
                         letterSpacing: 2.0,
                       ),
                     ),
@@ -195,7 +216,7 @@ class _SplashScreenState extends State<SplashScreen>
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
-                        color: Colors.black54,
+                        color: Color(0xFF4B5563),
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -208,84 +229,80 @@ class _SplashScreenState extends State<SplashScreen>
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: Builder(
-                      builder: (context) {
-                        final primaryColor = Theme.of(context).colorScheme.primary;
-                        return Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                primaryColor,
-                                primaryColor.withOpacity(0.85),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: primaryColor.withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
+                    child: Builder(builder: (context) {
+                      final primaryColor = Theme.of(context).colorScheme.primary;
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFF4F46E5),
+                              Color(0xFF3730A3),
                             ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          child: ElevatedButton(
-                            onPressed: _goToLogin,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.transparent,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF4F46E5).withOpacity(0.3),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
                             ),
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
+                          ],
+                        ),
+                        child: ElevatedButton(
+                          onPressed: _goToLogin,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                        );
-                      }
-                    ),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                   SizedBox(height: MediaQuery.of(context).size.height * 0.02),
                   // Secondary Sign Up button with stronger border
                   SizedBox(
                     width: double.infinity,
                     height: 56,
-                    child: Builder(
-                      builder: (context) {
-                        final primaryColor = Theme.of(context).colorScheme.primary;
-                        return OutlinedButton(
-                          onPressed: _goToSignup,
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(
-                              color: primaryColor.withOpacity(0.3),
-                              width: 2.0,
-                            ),
-                            foregroundColor: primaryColor,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                    child: Builder(builder: (context) {
+                      final primaryColor = Theme.of(context).colorScheme.primary;
+                      return OutlinedButton(
+                        onPressed: _goToSignup,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                            color: const Color(0xFF4F46E5),
+                            width: 2.0,
                           ),
-                          child: Text(
-                            'Sign Up',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: primaryColor,
-                              letterSpacing: 0.5,
-                            ),
+                          foregroundColor: const Color(0xFF4F46E5),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      }
-                    ),
+                        ),
+                        child: Text(
+                          'Sign Up',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF4F46E5),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      );
+                    }),
                   ),
                 ],
               ),
