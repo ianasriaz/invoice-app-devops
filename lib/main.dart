@@ -139,20 +139,6 @@ class MyApp extends StatelessWidget {
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      dialogTheme: DialogThemeData(
-        backgroundColor: AppColors.lightSurface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        titleTextStyle: GoogleFonts.inter(
-          color: AppColors.lightText,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
-        contentTextStyle: GoogleFonts.inter(
-          color: AppColors.lightText,
-          fontSize: 15,
-          fontWeight: FontWeight.w400,
-        ),
-      ),
       iconTheme: const IconThemeData(color: Colors.black87),
       textTheme: GoogleFonts.interTextTheme().apply(
         bodyColor: AppColors.lightText,
