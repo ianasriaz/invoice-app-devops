@@ -5,7 +5,8 @@ import 'package:gsheet/providers/invoice_provider.dart';
 import 'package:gsheet/services/firebase_service.dart';
 
 class FakeFirebaseService extends Fake implements FirebaseService {
-  FakeFirebaseService({required this.products, required this.customers, required this.signUrl});
+  FakeFirebaseService(
+      {required this.products, required this.customers, required this.signUrl});
 
   final List<Product> products;
   final List<Customer> customers;
