@@ -139,7 +139,7 @@ class MyApp extends StatelessWidget {
         elevation: 6,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: AppColors.lightSurface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         titleTextStyle: GoogleFonts.inter(
