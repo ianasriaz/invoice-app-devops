@@ -189,17 +189,27 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: Builder(builder: (context) {
-                          final theme = Theme.of(context);
-                          return Icon(
-                            Icons.receipt_long_rounded,
-                            size: 56,
-                            color: theme.colorScheme.primary,
-                          );
-                        }),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'icons/Logo.png',
+                            fit: BoxFit.contain,
+                            filterQuality: FilterQuality.high,
+                            width: 56,
+                            height: 56,
+                            // Fallback to icon if asset is missing
+                            errorBuilder: (context, error, stackTrace) {
+                              final theme = Theme.of(context);
+                              return Icon(
+                                Icons.receipt_long_rounded,
+                                size: 56,
+                                color: theme.colorScheme.primary,
+                              );
+                            },
+                          ),
+                        ),
                       ),
                     ),
-                    SizedBox(height: MediaQuery.of(context).size.height * 0.03),
+                    const SizedBox(height: 24),
                     // Brand name with enhanced typography
                     const Text(
                       'INVOICO',
@@ -210,7 +220,7 @@ class _SplashScreenState extends State<SplashScreen>
                         letterSpacing: 2.0,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     const Text(
                       'Professional Invoice Management',
                       style: TextStyle(
