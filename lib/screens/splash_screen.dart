@@ -144,6 +144,15 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Widget _buildSecondScreen() {
+    final screenSize = MediaQuery.of(context).size;
+    final isMobile = screenSize.width < 600;
+    
+    // Responsive sizing based on screen width
+    final logoSize = isMobile ? 80.0 : 100.0;
+    final titleFontSize = isMobile ? 24.0 : 28.0;
+    final subtitleFontSize = isMobile ? 13.0 : 15.0;
+    final horizontalPadding = isMobile ? 20.0 : 32.0;
+    
     return Container(
       key: const ValueKey('second'),
       decoration: const BoxDecoration(
@@ -155,73 +164,83 @@ class _SplashScreenState extends State<SplashScreen>
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 40),
+          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
               Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo with elevated shadow
-                    PhysicalModel(
-                      color: Colors.white,
-                      elevation: 8,
-                      shadowColor: Colors.black.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        padding: const EdgeInsets.all(22),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFF4F46E5).withOpacity(0.08),
-                            width: 2.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF4F46E5).withOpacity(0.05),
-                              blurRadius: 20,
-                              spreadRadius: 4,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Logo with responsive sizing
+                      PhysicalModel(
+                        color: Colors.white,
+                        elevation: 8,
+                        shadowColor: Colors.black.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                        child: Container(
+                          width: logoSize,
+                          height: logoSize,
+                          padding: EdgeInsets.all(logoSize * 0.22),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF4F46E5).withOpacity(0.08),
+                              width: 2.5,
                             ),
-                          ],
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4F46E5).withOpacity(0.05),
+                                blurRadius: 20,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Builder(builder: (context) {
+                            final theme = Theme.of(context);
+                            // Use the same logo icon as Splash Screen 1
+                            return Icon(
+                              Icons.receipt_long_rounded,
+                              size: logoSize * 0.56,
+                              color: theme.colorScheme.primary,
+                            );
+                          }),
                         ),
-                        child: Builder(builder: (context) {
-                          final theme = Theme.of(context);
-                          // Use the same logo icon as Splash Screen 1
-                          return Icon(
-                            Icons.receipt_long_rounded,
-                            size: 56,
-                            color: theme.colorScheme.primary,
-                          );
-                        }),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    // Brand name with enhanced typography
-                    const Text(
-                      'INVOICO',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: Color(0xFF1F2937),
-                        letterSpacing: 2.0,
+                      SizedBox(height: logoSize * 0.3),
+                      // Brand name with responsive font size
+                      Text(
+                        'INVOICO',
+                        style: TextStyle(
+                          fontSize: titleFontSize,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF1F2937),
+                          letterSpacing: 2.0,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 14),
-                    const Text(
-                      'Professional Invoice Management',
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF4B5563),
-                        letterSpacing: 0.3,
+                      SizedBox(height: logoSize * 0.175),
+                      // Subtitle with responsive font size and better wrapping
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 0),
+                        child: Text(
+                          'Professional Invoice Management',
+                          style: TextStyle(
+                            fontSize: subtitleFontSize,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF4B5563),
+                            letterSpacing: 0.3,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               Column(
@@ -229,9 +248,10 @@ class _SplashScreenState extends State<SplashScreen>
                   // Primary Sign In button with gradient
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: isMobile ? 52.0 : 56.0,
                     child: Builder(builder: (context) {
-                      final shadowColor = const Color(0xFF4F46E5).withOpacity(0.3);
+                      final shadowColor =
+                          const Color(0xFF4F46E5).withOpacity(0.3);
                       return Container(
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
@@ -262,10 +282,10 @@ class _SplashScreenState extends State<SplashScreen>
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: const Text(
+                          child: Text(
                             'Sign In',
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: isMobile ? 15.0 : 16.0,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
@@ -274,19 +294,19 @@ class _SplashScreenState extends State<SplashScreen>
                       );
                     }),
                   ),
-                  SizedBox(height: MediaQuery.of(context).size.height * 0.02),
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.015),
                   // Secondary Sign Up button with stronger border
                   SizedBox(
                     width: double.infinity,
-                    height: 56,
+                    height: isMobile ? 52.0 : 56.0,
                     child: Builder(builder: (context) {
                       final primaryColor =
                           Theme.of(context).colorScheme.primary;
                       return OutlinedButton(
                         onPressed: _goToSignup,
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(
-                            color: const Color(0xFF4F46E5),
+                          side: const BorderSide(
+                            color: Color(0xFF4F46E5),
                             width: 2.0,
                           ),
                           foregroundColor: const Color(0xFF4F46E5),
@@ -297,7 +317,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Text(
                           'Sign Up',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: isMobile ? 15.0 : 16.0,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF4F46E5),
                             letterSpacing: 0.5,
@@ -308,6 +328,7 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                 ],
               ),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.01),
             ],
           ),
         ),
