@@ -1,12 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:gsheet/models/service.dart';
 import 'package:gsheet/constants/app_colors.dart';
-
-// Brand Color Definition (Purple theme)
-const Color kBrandColor = AppColors.primary;
-const Color kBackgroundColor = AppColors.lightBackground;
 
 class ManageServicesScreen extends StatefulWidget {
   const ManageServicesScreen({Key? key}) : super(key: key);
@@ -18,6 +15,10 @@ class ManageServicesScreen extends StatefulWidget {
 class _ManageServicesScreenState extends State<ManageServicesScreen> {
   final _firestore = FirebaseFirestore.instance;
   String get _userId => FirebaseAuth.instance.currentUser!.uid;
+
+  // Use the AppColors primary or fallback to a professional purple
+  final Color _brandColor = AppColors.primary;
+  final Color _bgColor = const Color(0xFFF8F9FD);
 
   final List<String> _units = [
     'hour',
@@ -34,186 +35,192 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
     final nameController = TextEditingController(text: service?.name ?? '');
     final descController =
         TextEditingController(text: service?.description ?? '');
-    final rateController = TextEditingController(
-      text: service?.rate.toString() ?? '',
-    );
+    final rateController =
+        TextEditingController(text: service?.rate.toString() ?? '');
     String selectedUnit = service?.unit ?? 'hour';
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          backgroundColor: Colors.white,
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      service == null ? 'Add Service' : 'Edit Service',
+                      service == null ? 'New Service' : 'Edit Service',
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    _buildTextField(
-                      controller: nameController,
-                      label: 'Service Name',
-                      icon: Icons.work_outline_rounded,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildTextField(
-                      controller: descController,
-                      label: 'Description',
-                      icon: Icons.description_outlined,
-                      maxLines: 2,
-                      validator: (v) => v!.isEmpty ? 'Required' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: _buildTextField(
-                            controller: rateController,
-                            label: 'Charges (PKR)',
-                            icon: Icons.currency_exchange,
-                            inputType: TextInputType.number,
-                            validator: (v) {
-                              if (v!.isEmpty) return 'Required';
-                              if (double.tryParse(v) == null) return 'Invalid';
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: DropdownButtonFormField<String>(
-                            value: selectedUnit,
-                            icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                            decoration: InputDecoration(
-                              labelText: 'Unit',
-                              filled: true,
-                              fillColor: Colors.grey[50],
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 12),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide:
-                                    BorderSide(color: Colors.grey[200]!),
-                              ),
-                            ),
-                            items: _units.map((unit) {
-                              return DropdownMenuItem(
-                                value: unit,
-                                child: Text(
-                                  unit,
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (value) {
-                              setState(() => selectedUnit = value!);
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(color: Colors.grey[600]),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        ElevatedButton(
-                          onPressed: () async {
-                            if (!formKey.currentState!.validate()) return;
-
-                            try {
-                              final serviceData = {
-                                'name': nameController.text.trim(),
-                                'description': descController.text.trim(),
-                                'rate': double.parse(rateController.text),
-                                'unit': selectedUnit,
-                                'userId': _userId,
-                                'updatedAt': FieldValue.serverTimestamp(),
-                              };
-
-                              if (service == null) {
-                                await _firestore
-                                    .collection('services')
-                                    .add(serviceData);
-                              } else {
-                                await _firestore
-                                    .collection('services')
-                                    .doc(service.id)
-                                    .update(serviceData);
-                              }
-
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(service == null
-                                        ? 'Service added!'
-                                        : 'Service updated!'),
-                                    backgroundColor: kBrandColor,
-                                    behavior: SnackBarBehavior.floating,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('Error: $e'),
-                                      backgroundColor: Colors.red),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kBrandColor,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            service == null ? 'Add' : 'Update',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white),
-                          ),
-                        ),
-                      ],
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded, color: Colors.grey),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 24),
+                _buildModernTextField(
+                  controller: nameController,
+                  label: 'Service Name',
+                  hint: 'e.g. Web Development',
+                  icon: Icons.work_outline_rounded,
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 16),
+                _buildModernTextField(
+                  controller: descController,
+                  label: 'Description',
+                  hint: 'Brief details about the service...',
+                  icon: Icons.description_outlined,
+                  maxLines: 2,
+                  validator: (v) => v!.isEmpty ? 'Required' : null,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: _buildModernTextField(
+                        controller: rateController,
+                        label: 'Rate',
+                        hint: '0.00',
+                        icon: Icons.attach_money_rounded,
+                        inputType: TextInputType.number,
+                        validator: (v) {
+                          if (v!.isEmpty) return 'Required';
+                          if (double.tryParse(v) == null) return 'Invalid';
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: DropdownButtonFormField<String>(
+                        value: selectedUnit,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                        style: TextStyle(color: Colors.grey[800], fontSize: 15),
+                        decoration: InputDecoration(
+                          labelText: 'Unit',
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        items: _units.map((unit) {
+                          return DropdownMenuItem(
+                            value: unit,
+                            child: Text(
+                              unit.capitalize(),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) =>
+                            setState(() => selectedUnit = value!),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (!formKey.currentState!.validate()) return;
+                      HapticFeedback.lightImpact();
+
+                      try {
+                        final serviceData = {
+                          'name': nameController.text.trim(),
+                          'description': descController.text.trim(),
+                          'rate': double.parse(rateController.text),
+                          'unit': selectedUnit,
+                          'userId': _userId,
+                          'updatedAt': FieldValue.serverTimestamp(),
+                        };
+
+                        if (service == null) {
+                          await _firestore
+                              .collection('services')
+                              .add(serviceData);
+                        } else {
+                          await _firestore
+                              .collection('services')
+                              .doc(service.id)
+                              .update(serviceData);
+                        }
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(service == null
+                                  ? 'Service added successfully'
+                                  : 'Service updated successfully'),
+                              backgroundColor: _brandColor,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _brandColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      service == null ? 'Create Service' : 'Save Changes',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -221,10 +228,11 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
     );
   }
 
-  Widget _buildTextField({
+  Widget _buildModernTextField({
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    String? hint,
     TextInputType? inputType,
     int maxLines = 1,
     String? Function(String?)? validator,
@@ -234,29 +242,30 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
       keyboardType: inputType,
       maxLines: maxLines,
       validator: validator,
-      style: const TextStyle(fontSize: 14),
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, size: 20, color: Colors.grey[600]),
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.grey[400]),
+        prefixIcon: Icon(icon, size: 22, color: _brandColor.withOpacity(0.7)),
         filled: true,
         fillColor: Colors.grey[50],
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        contentPadding: const EdgeInsets.all(20),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           borderSide: BorderSide(color: Colors.grey[200]!),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: kBrandColor, width: 1.5),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: _brandColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.error, width: 1),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: Colors.redAccent, width: 1),
         ),
       ),
     );
@@ -266,45 +275,24 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Delete Service'),
-        content: const Text('Are you sure you want to delete this service?'),
+        content: const Text('This action cannot be undone. Proceed?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      try {
-        await _firestore.collection('services').doc(id).delete();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Service deleted'),
-                behavior: SnackBarBehavior.floating,
-                backgroundColor: AppColors.success),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-          );
-        }
-      }
+      await _firestore.collection('services').doc(id).delete();
     }
   }
 
@@ -312,19 +300,19 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check for responsive layout
+    final isDesktop = MediaQuery.of(context).size.width > 900;
+
     return Scaffold(
-      backgroundColor: kBackgroundColor,
+      backgroundColor: _bgColor,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        foregroundColor: Colors.black87,
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
         title: const Text(
-          'Manage Services',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+          'Services Catalog',
+          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 22),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -334,114 +322,200 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(
+                child: Text('Something went wrong',
+                    style: TextStyle(color: Colors.grey[600])));
           }
 
           if (!snapshot.hasData) {
-            return const Center(
-                child: CircularProgressIndicator(color: kBrandColor));
+            return Center(child: CircularProgressIndicator(color: _brandColor));
           }
 
           final services = snapshot.data!.docs;
 
           if (services.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: kBrandColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.work_outline_rounded,
-                        size: 64, color: kBrandColor.withOpacity(0.5)),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    'No services yet',
-                    style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700]),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Define services for faster invoicing',
-                    style: TextStyle(color: Colors.grey[500]),
-                  ),
-                ],
-              ),
-            );
+            return _buildEmptyState();
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: services.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 16),
-            itemBuilder: (context, index) {
-              final doc = services[index];
-              final data = doc.data() as Map<String, dynamic>;
-              final service = Service(
-                id: doc.id,
-                name: data['name'] ?? '',
-                description: data['description'] ?? '',
-                rate: double.parse(data['rate']?.toString() ?? '0'),
-                unit: data['unit'] ?? 'hour',
-              );
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Header with count
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+                  child: Row(
+                    children: [
+                      Text(
+                        '${services.length} Services Available',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
-              return _buildServiceCard(service);
-            },
+              // Responsive Grid/List
+              SliverPadding(
+                padding:
+                    const EdgeInsets.only(left: 20, right: 20, bottom: 100),
+                sliver: SliverGrid(
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: isDesktop
+                        ? 400
+                        : 600, // Wide cards on mobile, grid on desktop
+                    childAspectRatio: 2.2, // Rectangular card aspect ratio
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final doc = services[index];
+                      final data = doc.data() as Map<String, dynamic>;
+                      final service = Service(
+                        id: doc.id,
+                        name: data['name'] ?? '',
+                        description: data['description'] ?? '',
+                        rate: double.parse(data['rate']?.toString() ?? '0'),
+                        unit: data['unit'] ?? 'hour',
+                      );
+                      return _ServiceCard(
+                        service: service,
+                        brandColor: _brandColor,
+                        onEdit: () => _showServiceDialog(service: service),
+                        onDelete: () => _deleteService(service.id),
+                      );
+                    },
+                    childCount: services.length,
+                  ),
+                ),
+              ),
+            ],
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showServiceDialog(),
-        backgroundColor: kBrandColor,
+        onPressed: () {
+          HapticFeedback.selectionClick();
+          _showServiceDialog();
+        },
+        backgroundColor: _brandColor,
         elevation: 4,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        icon: const Icon(Icons.add, color: Colors.white),
         label: const Text(
-          'Add Service',
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          'New Service',
+          style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              letterSpacing: 0.5),
         ),
       ),
     );
   }
 
-  Widget _buildServiceCard(Service service) {
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(30),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Icon(Icons.inventory_2_outlined,
+                size: 60, color: _brandColor.withOpacity(0.5)),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No Services Yet',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey[800],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add services to speed up your invoicing.',
+            style: TextStyle(color: Colors.grey[500]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ServiceCard extends StatelessWidget {
+  final Service service;
+  final Color brandColor;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _ServiceCard({
+    required this.service,
+    required this.brandColor,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withOpacity(0.06),
             blurRadius: 15,
-            offset: const Offset(0, 5),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
-          onTap: () => _showServiceDialog(service: service),
-          borderRadius: BorderRadius.circular(16),
+          onTap: onEdit,
+          borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Icon Container
+                // Icon Box
                 Container(
                   width: 50,
                   height: 50,
                   decoration: BoxDecoration(
-                    color: kBrandColor.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(12),
+                    color: brandColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: const Icon(Icons.design_services_outlined,
-                      color: kBrandColor),
+                  child: Center(
+                    child: Text(
+                      service.name.isNotEmpty
+                          ? service.name[0].toUpperCase()
+                          : 'S',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: brandColor,
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 16),
 
@@ -449,74 +523,73 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         service.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
                           color: Colors.black87,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         service.description,
-                        maxLines: 1,
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey[500],
+                          height: 1.3,
                         ),
                       ),
                     ],
                   ),
                 ),
 
-                // Rate Badge & Actions
+                // Pricing & Actions
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: kBrandColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
+                        color: Colors.green.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        'PKR ${service.rate.toStringAsFixed(0)}/${service.unit.substring(0, 1).toUpperCase()}${service.unit.substring(1)}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: kBrandColor,
+                        'PKR ${service.rate.toStringAsFixed(0)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.green[700],
                         ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const Spacer(),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        InkWell(
-                          onTap: () => _showServiceDialog(service: service),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(Icons.edit_rounded,
-                                size: 18, color: Colors.grey[400]),
+                        Text(
+                          '/${service.unit}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.grey[400],
                           ),
                         ),
                         const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () => _deleteService(service.id),
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(4),
-                            child: Icon(Icons.delete_outline_rounded,
-                                size: 18, color: Colors.red[300]),
-                          ),
+                        GestureDetector(
+                          onTap: onDelete,
+                          child: Icon(Icons.delete_outline_rounded,
+                              size: 20, color: Colors.grey[400]),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ],
@@ -525,5 +598,11 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
         ),
       ),
     );
+  }
+}
+
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

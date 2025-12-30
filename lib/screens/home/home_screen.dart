@@ -81,9 +81,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   // Responsive breakpoints
-  bool _isSmallMobile(double width) => width < 360;
   bool _isMobile(double width) => width < 600;
-  bool _isTablet(double width) => width >= 600 && width < 900;
   bool _isDesktop(double width) => width >= 900;
 
   int _getCrossAxisCount(double width) {

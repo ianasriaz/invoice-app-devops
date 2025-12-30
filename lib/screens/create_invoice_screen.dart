@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:gsheet/models/client.dart';
 import 'package:gsheet/models/freelance_invoice.dart';
 import 'package:gsheet/models/invoice_line_item.dart';
@@ -36,12 +36,11 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
 
   bool _isLoading = false;
   late AnimationController _pageController;
-  late AnimationController _pulseController;
   late Animation<double> _pageAnimation;
 
+  // Colors
   final Color _brandColor = AppColors.primary;
-  final Color _brandColorLight = AppColors.primaryLight;
-  final Color _brandColorDark = AppColors.primary;
+  final Color _brandColorDark = const Color(0xFF4A148C);
 
   @override
   void initState() {
@@ -55,10 +54,6 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    )..repeat(reverse: true);
 
     _pageAnimation = CurvedAnimation(
       parent: _pageController,
@@ -85,7 +80,9 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.light(
               primary: _brandColor,
+              onPrimary: Colors.white,
               surface: Colors.white,
+              onSurface: Colors.black,
             ),
           ),
           child: child!,
@@ -103,395 +100,195 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
     }
   }
 
-  void _showAddServiceDialog() async {
+  void _showAddServiceDialog() {
     String? selectedServiceId;
     Service? selectedService;
     final quantityController = TextEditingController(text: '1');
     final notesController = TextEditingController();
 
-    await showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          backgroundColor: Colors.transparent,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: _brandColor.withOpacity(0.3),
-                  blurRadius: 30,
-                  offset: const Offset(0, 15),
-                ),
-              ],
-            ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Add Service',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(Icons.close,
-                                color: Colors.grey[700], size: 20),
-                          ),
-                        ),
-                      ],
+        builder: (context, setState) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+            top: 24,
+            left: 24,
+            right: 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Add Service Line Item',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
-                    const SizedBox(height: 24),
-                    StreamBuilder<QuerySnapshot>(
-                      stream: _firestore
-                          .collection('services')
-                          .where('userId', isEqualTo: _userId)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        // Handle errors
-                        if (snapshot.hasError) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                children: [
-                                  Icon(Icons.error_outline,
-                                      size: 48, color: Colors.red[400]),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'Error loading services',
-                                    style: TextStyle(
-                                        color: Colors.grey[600], fontSize: 14),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded, color: Colors.grey),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              StreamBuilder<QuerySnapshot>(
+                stream: _firestore
+                    .collection('services')
+                    .where('userId', isEqualTo: _userId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError)
+                    return const Text('Error loading services');
+                  if (!snapshot.hasData) return const LinearProgressIndicator();
 
-                        if (!snapshot.hasData ||
-                            snapshot.connectionState ==
-                                ConnectionState.waiting) {
-                          return const Center(
-                            child: SizedBox(
-                              width: 30,
-                              height: 30,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          );
-                        }
+                  final services = snapshot.data!.docs.map((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    return Service(
+                      id: doc.id,
+                      name: data['name'] ?? '',
+                      description: data['description'] ?? '',
+                      rate: double.parse(data['rate']?.toString() ?? '0'),
+                      unit: data['unit'] ?? 'hour',
+                    );
+                  }).toList();
 
-                        final services = snapshot.data!.docs
-                            .map((doc) => Service(
-                                  id: doc.id,
-                                  name: (doc.data() as Map)['name'] ?? '',
-                                  description:
-                                      (doc.data() as Map)['description'] ?? '',
-                                  rate: double.parse(
-                                      ((doc.data() as Map)['rate'] ?? 0)
-                                          .toString()),
-                                  unit: (doc.data() as Map)['unit'] ?? 'hour',
-                                ))
-                            .toList();
+                  if (services.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No services found. Create one first.',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    );
+                  }
 
-                        if (services.isEmpty) {
-                          return Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                children: [
-                                  Icon(Icons.inventory_2_outlined,
-                                      size: 48, color: Colors.grey[400]),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    'No services available',
-                                    style: TextStyle(
-                                      color: Colors.grey[600],
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Create a service in "Manage Services" first',
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        return DropdownButtonFormField<String>(
-                          value: selectedServiceId,
-                          decoration: InputDecoration(
-                            labelText: 'Select Service',
-                            prefixIcon: const Icon(Icons.work_rounded),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: Colors.grey[300]!,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: Colors.grey[300]!,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(14),
-                              borderSide: BorderSide(
-                                color: _brandColor,
-                                width: 2,
-                              ),
-                            ),
-                            filled: true,
-                            fillColor: Colors.grey[50],
-                          ),
-                          items: services.map((service) {
-                            return DropdownMenuItem<String>(
-                              value: service.id,
-                              child: Text(service.name),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              selectedServiceId = value;
-                              selectedService = services.firstWhere(
-                                (s) => s.id == value,
-                              );
-                            });
-                          },
-                        );
-                      },
+                  return DropdownButtonFormField<String>(
+                    value: selectedServiceId,
+                    hint: const Text('Select a Service'),
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 16),
                     ),
-                    const SizedBox(height: 16),
-                    if (selectedService != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _brandColor.withOpacity(0.08),
-                              _brandColorLight.withOpacity(0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: _brandColor.withOpacity(0.2),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              selectedService!.description,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey[700],
-                                height: 1.5,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(Icons.local_offer_rounded,
-                                    color: _brandColor, size: 18),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Rs ${selectedService!.rate.toStringAsFixed(0)} / ${selectedService!.unit}',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    color: _brandColor,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                    items: services.map((service) {
+                      return DropdownMenuItem(
+                        value: service.id,
+                        child: Text(service.name),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        selectedServiceId = val;
+                        selectedService =
+                            services.firstWhere((s) => s.id == val);
+                      });
+                    },
+                  );
+                },
+              ),
+              if (selectedService != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _brandColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: _brandColor.withOpacity(0.1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Rate: Rs ${selectedService!.rate.toStringAsFixed(0)} / ${selectedService!.unit}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _brandColor,
                         ),
                       ),
-                      const SizedBox(height: 16),
                     ],
-                    TextFormField(
-                      controller: quantityController,
-                      decoration: InputDecoration(
-                        labelText:
-                            'Quantity (${selectedService?.unit ?? "units"})',
-                        prefixIcon: const Icon(Icons.numbers_rounded),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: _brandColor,
-                            width: 2,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: quantityController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Quantity',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
                       ),
-                      keyboardType: TextInputType.number,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: notesController,
-                      decoration: InputDecoration(
-                        labelText: 'Notes (Optional)',
-                        prefixIcon: const Icon(Icons.note_rounded),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.grey[300]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(
-                            color: _brandColor,
-                            width: 2,
-                          ),
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[50],
-                      ),
-                      maxLines: 2,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: OutlinedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              side: BorderSide(
-                                color: Colors.grey[300]!,
-                                width: 1.5,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Cancel',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [_brandColor, _brandColorDark],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _brandColor.withOpacity(0.3),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                onTap: selectedService == null
-                                    ? null
-                                    : () {
-                                        this.setState(() {
-                                          _lineItems.add(InvoiceLineItem(
-                                            service: selectedService!,
-                                            quantity: double.parse(
-                                                quantityController.text),
-                                            notes: notesController.text.isEmpty
-                                                ? null
-                                                : notesController.text,
-                                          ));
-                                        });
-                                        Navigator.pop(context);
-                                      },
-                                borderRadius: BorderRadius.circular(12),
-                                child: const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 14),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add_rounded,
-                                          color: Colors.white, size: 20),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Add Item',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.white,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ],
                 ),
-              ),
-            ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: notesController,
+                  decoration: InputDecoration(
+                    labelText: 'Item Notes (Optional)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (selectedService == null) return;
+                      this.setState(() {
+                        _lineItems.add(InvoiceLineItem(
+                          service: selectedService!,
+                          quantity:
+                              double.tryParse(quantityController.text) ?? 1,
+                          notes: notesController.text.isEmpty
+                              ? null
+                              : notesController.text,
+                        ));
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _brandColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Add Item',
+                        style: TextStyle(
+                            color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),
     );
   }
 
+  // Calculation Getters
   double get _subtotal =>
-      _lineItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+      _lineItems.fold(0, (sum, item) => sum + item.totalPrice);
   double get _taxAmount => _subtotal * (_taxRate / 100);
   double get _total => _subtotal + _taxAmount;
 
@@ -499,36 +296,21 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
     if (!_formKey.currentState!.validate()) return;
     if (_selectedClient == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please select a client'),
-          backgroundColor: Colors.red[600],
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+          const SnackBar(content: Text('Please select a client')));
       return;
     }
     if (_lineItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Please add at least one service'),
-          backgroundColor: Colors.red[600],
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.all(16),
-        ),
-      );
+          const SnackBar(content: Text('Please add at least one item')));
       return;
     }
 
     setState(() => _isLoading = true);
+    HapticFeedback.mediumImpact();
 
     try {
       final invoice = FreelanceInvoice(
-        id: '',
+        id: '', // Generated by Firestore
         invoiceNumber: _invoiceNumberController.text,
         client: _selectedClient!,
         issueDate: _issueDate,
@@ -536,9 +318,8 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
         items: _lineItems,
         status: InvoiceStatus.draft,
         taxRate: _taxRate,
-        notes: _notesController.text.isEmpty ? null : _notesController.text,
-        termsAndConditions:
-            _termsController.text.isEmpty ? null : _termsController.text,
+        notes: _notesController.text,
+        termsAndConditions: _termsController.text,
       );
 
       await _firestore.collection('invoices').add({
@@ -550,28 +331,13 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Invoice created successfully!'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-          ),
+          const SnackBar(content: Text('Invoice created successfully!')),
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red[600],
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -582,1100 +348,431 @@ class _CreateInvoiceScreenState extends State<CreateInvoiceScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
-      appBar: _buildEnhancedAppBar(),
+      appBar: AppBar(
+        title: const Text('New Invoice',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close_rounded, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: FadeTransition(
         opacity: _pageAnimation,
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.1),
-            end: Offset.zero,
-          ).animate(_pageAnimation),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildAnimatedSection(
-                    'Invoice Details',
-                    Icons.receipt_long_rounded,
-                    _buildInvoiceDetailsCard(),
-                    delay: 100,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAnimatedSection(
-                    'Bill To',
-                    Icons.person_rounded,
-                    _buildClientSelectionCard(),
-                    delay: 200,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAnimatedSection(
-                    'Services',
-                    Icons.inventory_2_rounded,
-                    _buildServicesCard(),
-                    delay: 300,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAnimatedSection(
-                    'Tax Configuration',
-                    Icons.percent_rounded,
-                    _buildTaxRateCard(),
-                    delay: 400,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAnimatedTotalCard(),
-                  const SizedBox(height: 16),
-                  _buildAnimatedSection(
-                    'Additional Notes',
-                    Icons.note_rounded,
-                    _buildNotesCard(),
-                    delay: 600,
-                  ),
-                  const SizedBox(height: 16),
-                  _buildAnimatedSection(
-                    'Terms & Conditions',
-                    Icons.description_rounded,
-                    _buildTermsCard(),
-                    delay: 700,
-                  ),
-                  const SizedBox(height: 24),
-                  ScaleTransition(
-                    scale: Tween<double>(begin: 0.8, end: 1.0).animate(
-                      CurvedAnimation(
-                        parent: _pageController,
-                        curve: const Interval(0.7, 1.0, curve: Curves.easeOut),
-                      ),
-                    ),
-                    child: _buildAnimatedSaveButton(),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildEnhancedAppBar() {
-    return AppBar(
-      elevation: 0,
-      backgroundColor: Colors.white,
-      centerTitle: true,
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_rounded, color: AppColors.primary),
-        onPressed: () => Navigator.of(context).pop(),
-      ),
-      title: const Text(
-        'Create Invoice',
-        style: TextStyle(
-          color: Colors.black,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.3,
-        ),
-      ),
-      actions: [
-        if (_isLoading)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2.5,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                ),
-              ),
-            ),
-          )
-        else
-          IconButton(
-            icon: Icon(Icons.save_rounded, color: AppColors.primary),
-            onPressed: _saveInvoice,
-            tooltip: 'Save Invoice',
-          ),
-      ],
-    );
-  }
-
-  Widget _buildAnimatedSection(
-    String title,
-    IconData icon,
-    Widget content, {
-    required int delay,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 600 + delay),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, (1 - value) * 25),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: _brandColor.withOpacity(0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _brandColor.withOpacity(0.08),
-                    _brandColorLight.withOpacity(0.04),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-                border: Border(
-                  bottom: BorderSide(
-                    color: _brandColor.withOpacity(0.1),
-                    width: 1,
-                  ),
-                ),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [_brandColor, _brandColorLight],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _brandColor.withOpacity(0.25),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 14),
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: content,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInvoiceDetailsCard() {
-    return Column(
-      children: [
-        TextFormField(
-          controller: _invoiceNumberController,
-          decoration: InputDecoration(
-            labelText: 'Invoice Number',
-            prefixIcon: Icon(Icons.numbers_rounded, color: _brandColor),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: _brandColor, width: 2),
-            ),
-            filled: true,
-            fillColor: Colors.grey[50],
-          ),
-          validator: (v) => v!.isEmpty ? 'Required' : null,
-        ),
-        const SizedBox(height: 18),
-        Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _selectDate(context, true),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey[300]!, width: 1.5),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Issue Date',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  _brandColor.withOpacity(0.2),
-                                  _brandColorLight.withOpacity(0.2),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.calendar_today_rounded,
-                                color: _brandColor, size: 18),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              DateFormat.yMMMd().format(_issueDate),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => _selectDate(context, false),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey[300]!, width: 1.5),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Due Date',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.calendar_today_rounded,
-                                color: Colors.orange[600], size: 18),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              DateFormat.yMMMd().format(_dueDate),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildClientSelectionCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        StreamBuilder<QuerySnapshot>(
-          stream: _firestore
-              .collection('clients')
-              .where('userId', isEqualTo: _userId)
-              .snapshots(),
-          builder: (context, snapshot) {
-            // Handle errors
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Icon(Icons.error_outline,
-                          size: 48, color: Colors.red[400]),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Error loading clients',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        snapshot.error.toString(),
-                        style: TextStyle(color: Colors.red[400], fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            if (!snapshot.hasData ||
-                snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: SizedBox(
-                  width: 30,
-                  height: 30,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              );
-            }
-
-            final clients = snapshot.data!.docs
-                .map((doc) => Client(
-                      id: doc.id,
-                      name: (doc.data() as Map)['name'] ?? '',
-                      email: (doc.data() as Map)['email'] ?? '',
-                      phone: (doc.data() as Map)['phone'] ?? '',
-                      address: (doc.data() as Map)['address'] ?? '',
-                      company: (doc.data() as Map)['company'],
-                    ))
-                .toList();
-
-            if (clients.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      Icon(Icons.person_outline_rounded,
-                          size: 48, color: Colors.grey[400]),
-                      const SizedBox(height: 12),
-                      Text(
-                        'No clients available',
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Create a client in "Manage Clients" first',
-                        style: TextStyle(
-                          color: Colors.grey[500],
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return DropdownButtonFormField<String>(
-              value: _selectedClient?.id,
-              decoration: InputDecoration(
-                labelText: 'Select Client',
-                prefixIcon: Icon(Icons.person_rounded, color: _brandColor),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  borderSide: BorderSide(color: _brandColor, width: 2),
-                ),
-                filled: true,
-                fillColor: Colors.grey[50],
-              ),
-              items: clients.map((client) {
-                return DropdownMenuItem<String>(
-                  value: client.id,
-                  child: Text(
-                      '${client.name}${client.company != null ? ' (${client.company})' : ''}'),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  _selectedClient = clients.firstWhere(
-                    (c) => c.id == value,
-                  );
-                });
-              },
-              validator: (v) => v == null ? 'Please select a client' : null,
-            );
-          },
-        ),
-        if (_selectedClient != null) ...[
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                  Theme.of(context).colorScheme.primary.withOpacity(0.04),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
-                width: 1.5,
-              ),
-              borderRadius: BorderRadius.circular(14),
-            ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          physics: const BouncingScrollPhysics(),
+          child: Form(
+            key: _formKey,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
+                // 1. Invoice Basics Card
+                _buildSectionCard(
+                  title: 'Invoice Details',
+                  icon: Icons.receipt_long_rounded,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _invoiceNumberController,
+                        decoration: InputDecoration(
+                          labelText: 'Invoice Number',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        validator: (v) => v!.isEmpty ? 'Required' : null,
                       ),
-                      child: Icon(
-                        Icons.check_circle_rounded,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 18,
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildDateSelector(
+                                'Issue Date', _issueDate, true),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child:
+                                _buildDateSelector('Due Date', _dueDate, false),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        _selectedClient!.name,
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 14),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                if (_selectedClient!.company != null) ...[
-                  const SizedBox(height: 8),
-                  Text(_selectedClient!.company!,
-                      style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500)),
-                ],
-                const SizedBox(height: 8),
-                Text(_selectedClient!.email,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
-                Text(_selectedClient!.phone,
-                    style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500)),
+
+                const SizedBox(height: 20),
+
+                // 2. Client Selection Card
+                _buildSectionCard(
+                  title: 'Bill To',
+                  icon: Icons.person_rounded,
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: _firestore
+                        .collection('clients')
+                        .where('userId', isEqualTo: _userId)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData)
+                        return const LinearProgressIndicator();
+
+                      final clients = snapshot.data!.docs.map((doc) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        return Client(
+                          id: doc.id,
+                          name: data['name'] ?? '',
+                          email: data['email'] ?? '',
+                          phone: data['phone'] ?? '',
+                          address: data['address'] ?? '',
+                          company: data['company'],
+                        );
+                      }).toList();
+
+                      return DropdownButtonFormField<String>(
+                        value: _selectedClient?.id,
+                        hint: const Text('Select Client'),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          filled: true,
+                          fillColor: Colors.grey[50],
+                        ),
+                        items: clients
+                            .map((c) => DropdownMenuItem(
+                                value: c.id, child: Text(c.name)))
+                            .toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedClient =
+                                clients.firstWhere((c) => c.id == val);
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 3. Line Items Card
+                _buildSectionCard(
+                  title: 'Services',
+                  icon: Icons.list_alt_rounded,
+                  child: Column(
+                    children: [
+                      if (_lineItems.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            children: [
+                              Icon(Icons.add_shopping_cart_rounded,
+                                  size: 40, color: Colors.grey[300]),
+                              const SizedBox(height: 8),
+                              Text('No items added yet',
+                                  style: TextStyle(color: Colors.grey[500])),
+                            ],
+                          ),
+                        )
+                      else
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _lineItems.length,
+                          separatorBuilder: (_, __) => const Divider(),
+                          itemBuilder: (context, index) {
+                            final item = _lineItems[index];
+                            return ListTile(
+                              title: Text(item.service.name,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold)),
+                              subtitle: Text(
+                                  '${item.quantity} x Rs ${item.service.rate}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                      'Rs ${item.totalPrice.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  IconButton(
+                                    icon: const Icon(
+                                        Icons.remove_circle_outline,
+                                        color: Colors.red),
+                                    onPressed: () => setState(
+                                        () => _lineItems.removeAt(index)),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _showAddServiceDialog,
+                        icon: const Icon(Icons.add),
+                        label: const Text('Add Line Item'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: _brandColor,
+                          side: BorderSide(color: _brandColor),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 20),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 4. Totals & Tax Card
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [_brandColor, _brandColorDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _brandColor.withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Tax Slider
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Tax Rate',
+                              style: TextStyle(color: Colors.white70)),
+                          Text('${_taxRate.toStringAsFixed(0)}%',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: Colors.white,
+                          inactiveTrackColor: Colors.white24,
+                          thumbColor: Colors.white,
+                          thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 8),
+                          overlayColor: Colors.white12,
+                        ),
+                        child: Slider(
+                          value: _taxRate,
+                          min: 0,
+                          max: 30,
+                          divisions: 30,
+                          onChanged: (val) => setState(() => _taxRate = val),
+                        ),
+                      ),
+                      const Divider(color: Colors.white24, height: 32),
+                      _buildTotalRow('Subtotal', _subtotal),
+                      const SizedBox(height: 8),
+                      _buildTotalRow(
+                          'Tax (${_taxRate.toStringAsFixed(0)}%)', _taxAmount),
+                      const SizedBox(height: 16),
+                      _buildTotalRow('Total Amount', _total, isTotal: true),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 5. Notes & Terms
+                _buildSectionCard(
+                  title: 'Additional Info',
+                  icon: Icons.note_alt_rounded,
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _notesController,
+                        decoration: InputDecoration(
+                          labelText: 'Notes',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _termsController,
+                        decoration: InputDecoration(
+                          labelText: 'Terms & Conditions',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // 6. Generate Invoice Button (Full Width)
+                Container(
+                  width: double.infinity,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [_brandColor, _brandColorDark],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _brandColor.withOpacity(0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isLoading ? null : _saveInvoice,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Center(
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                            : const Text(
+                                'Generate Invoice',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 40),
               ],
             ),
           ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildServicesCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '${_lineItems.length} Service${_lineItems.length != 1 ? 's' : ''}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [_brandColor, _brandColorDark],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: _brandColor.withOpacity(0.25),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: _showAddServiceDialog,
-                  borderRadius: BorderRadius.circular(10),
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    child: Row(
-                      children: [
-                        Icon(Icons.add_rounded, size: 18, color: Colors.white),
-                        SizedBox(width: 6),
-                        Text(
-                          'Add Service',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
         ),
-        const SizedBox(height: 16),
-        if (_lineItems.isEmpty)
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Icon(Icons.inbox_rounded, color: Colors.grey[400], size: 48),
-                  const SizedBox(height: 12),
-                  Text(
-                    'No services added yet',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _lineItems.length,
-            itemBuilder: (context, index) {
-              final item = _lineItems[index];
-              return _buildServiceWidget(item, index);
-            },
-          ),
-      ],
-    );
-  }
-
-  Widget _buildServiceWidget(InvoiceLineItem item, int index) {
-    return Dismissible(
-      key: ValueKey(index),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Colors.red[600]!, Colors.red[700]!],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withOpacity(0.25),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_rounded, color: Colors.white, size: 24),
       ),
-      onDismissed: (direction) {
-        setState(() {
-          _lineItems.removeAt(index);
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey[200]!, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: _brandColor.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+    );
+  }
+
+  Widget _buildSectionCard(
+      {required String title, required IconData icon, required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+            child: Row(
+              children: [
+                Icon(icon, color: _brandColor, size: 20),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
             ),
-          ],
+          ),
+          const Divider(height: 1),
+          Padding(padding: const EdgeInsets.all(20), child: child),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateSelector(String label, DateTime date, bool isIssueDate) {
+    return InkWell(
+      onTap: () => _selectDate(context, isIssueDate),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    item.service.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        _brandColor.withOpacity(0.15),
-                        _brandColorLight.withOpacity(0.1)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: _brandColor.withOpacity(0.2),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    'Rs ${item.totalPrice.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: _brandColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              item.service.description,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                height: 1.4,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 10),
+            Text(label,
+                style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+            const SizedBox(height: 4),
             Row(
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: _brandColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: _brandColor.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Text(
-                    '${item.quantity} ${item.service.unit}(s)',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: _brandColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                const Icon(Icons.calendar_today,
+                    size: 16, color: Colors.black87),
                 const SizedBox(width: 8),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withOpacity(0.2),
-                    ),
-                  ),
-                  child: Text(
-                    'Rs ${item.service.rate.toStringAsFixed(0)}/unit',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (item.notes != null) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Colors.orange.withOpacity(0.1),
-                  ),
-                ),
-                child: Text(
-                  'Note: ${item.notes}',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey[700],
-                    height: 1.4,
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaxRateCard() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Tax Rate',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _brandColor.withOpacity(0.15),
-                    _brandColorLight.withOpacity(0.1)
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: _brandColor.withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                '${_taxRate.toStringAsFixed(0)}%',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _brandColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        SliderTheme(
-          data: SliderThemeData(
-            trackHeight: 10,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
-            overlayShape: const RoundSliderOverlayShape(overlayRadius: 22),
-            activeTrackColor: _brandColor,
-            inactiveTrackColor: Colors.grey[200],
-            thumbColor: _brandColor,
-            overlayColor: _brandColor.withOpacity(0.2),
-          ),
-          child: Slider(
-            value: _taxRate,
-            min: 0,
-            max: 30,
-            divisions: 30,
-            label: '${_taxRate.toStringAsFixed(0)}%',
-            onChanged: (value) {
-              setState(() => _taxRate = value);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAnimatedTotalCard() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 1100),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, (1 - value) * 25),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [_brandColor, _brandColorLight],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: _brandColor.withOpacity(0.35),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            _buildTotalRow('Subtotal', _subtotal, isLight: true),
-            const SizedBox(height: 14),
-            _buildTotalRow(
-              'Tax (${_taxRate.toStringAsFixed(0)}%)',
-              _taxAmount,
-              isLight: true,
-            ),
-            Divider(
-              height: 24,
-              color: Colors.white.withOpacity(0.3),
-              thickness: 2,
-            ),
-            _buildTotalRow('Total Amount', _total,
-                isTotal: true, isLight: true),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNotesCard() {
-    return TextFormField(
-      controller: _notesController,
-      decoration: InputDecoration(
-        labelText: 'Notes (Optional)',
-        hintText: 'Add any additional notes...',
-        prefixIcon: Icon(Icons.note_rounded, color: _brandColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: _brandColor, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
-      maxLines: 3,
-    );
-  }
-
-  Widget _buildTermsCard() {
-    return TextFormField(
-      controller: _termsController,
-      decoration: InputDecoration(
-        labelText: 'Terms & Conditions',
-        prefixIcon: Icon(Icons.description_rounded, color: _brandColor),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.grey[300]!, width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: _brandColor, width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey[50],
-      ),
-      maxLines: 3,
-    );
-  }
-
-  Widget _buildAnimatedSaveButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [_brandColor, _brandColorDark],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _brandColor.withOpacity(0.4),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: _isLoading ? null : _saveInvoice,
-            borderRadius: BorderRadius.circular(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (!_isLoading) ...[
-                  Icon(Icons.check_circle_rounded,
-                      color: Colors.white, size: 22),
-                  const SizedBox(width: 12),
-                ],
                 Text(
-                  _isLoading ? 'Creating Invoice...' : 'Save Invoice',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                    letterSpacing: 0.5,
-                  ),
+                  DateFormat.yMMMd().format(date),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildTotalRow(
-    String label,
-    double amount, {
-    bool isTotal = false,
-    bool isLight = false,
-  }) {
+  Widget _buildTotalRow(String label, double amount, {bool isTotal = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
           style: TextStyle(
+            color: Colors.white,
             fontSize: isTotal ? 18 : 14,
-            fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
-            letterSpacing: 0.3,
-            color: isLight ? Colors.white : null,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),
         ),
         Text(
           'Rs ${amount.toStringAsFixed(2)}',
           style: TextStyle(
-            fontSize: isTotal ? 18 : 14,
-            fontWeight: isTotal ? FontWeight.w800 : FontWeight.w600,
-            color: isLight ? Colors.white : _brandColor,
-            letterSpacing: 0.3,
+            color: Colors.white,
+            fontSize: isTotal ? 22 : 14,
+            fontWeight: isTotal ? FontWeight.w900 : FontWeight.normal,
           ),
         ),
       ],
     );
-  }
-
-  @override
-  void dispose() {
-    _invoiceNumberController.dispose();
-    _notesController.dispose();
-    _termsController.dispose();
-    _pageController.dispose();
-    _pulseController.dispose();
-    super.dispose();
   }
 }
