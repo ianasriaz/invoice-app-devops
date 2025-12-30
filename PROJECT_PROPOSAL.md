@@ -8,17 +8,18 @@
 **Invoice Generator Mobile Application** - INVOICO - A Cross-Platform Invoice Management System
 
 ### Student Information
-**Student Name(s):** [Your Name]  
-**Registration Number(s):** [Your Registration #]  
+**Group Member(s):**
+1. Saif Ullah Awan - 230993
+2. Baseer Mughal - 230975
+3. Muhammad Anas Riaz - 231253
 
 ### Course Information
-**Course Name:** Mobile Application Development / Software Engineering  
-**Course Code:** [Course Code]  
+**Course Name:** Mobile Computing 
 
 ### Submission Details
-**Instructor Name:** [Instructor Name]  
-**Semester & Section:** [Semester/Section]  
-**Date of Submission:** December 24, 2025  
+**Instructor Name:** Mam Sara  
+**Semester & Section:** BSIT-V-A 
+**Date of Submission:** December 30, 2025  
 **Project Version:** 1.0  
 
 ---
