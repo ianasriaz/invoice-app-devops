@@ -110,7 +110,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ],
                   ),
                   child: const Icon(
-                    Icons.receipt_long_rounded,
+                    Icons.receipt,
                     size: 56,
                     color: Colors.white,
                   ),
@@ -203,11 +203,18 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           child: Builder(builder: (context) {
                             final theme = Theme.of(context);
-                            // Use the same logo icon as Splash Screen 1
-                            return Icon(
-                              Icons.receipt_long_rounded,
-                              size: logoSize * 0.56,
-                              color: theme.colorScheme.primary,
+                            return Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: theme.colorScheme.primary,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Icons.receipt,
+                                  size: logoSize * 0.5,
+                                  color: Colors.white,
+                                ),
+                              ),
                             );
                           }),
                         ),
