@@ -87,7 +87,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                           flex: 3,
                           child: _buildTextField(
                             controller: rateController,
-                            label: 'Rate',
+                            label: 'Charges (PKR)',
                             icon: Icons.currency_rupee,
                             inputType: TextInputType.number,
                             validator: (v) {
@@ -484,7 +484,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        'Rs ${service.rate.toStringAsFixed(0)}/${service.unit.substring(0, 1).toUpperCase()}${service.unit.substring(1)}',
+                        'PKR ${service.rate.toStringAsFixed(0)}/${service.unit.substring(0, 1).toUpperCase()}${service.unit.substring(1)}',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
