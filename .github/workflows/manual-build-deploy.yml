@@ -1,4 +1,4 @@
-name: 🚀 Manual Build & Deploy (No Trello)
+name: 🚀 Manual Code Push → Test & Build → Deploy (GCP)
 
 on:
   workflow_dispatch:
@@ -11,34 +11,35 @@ on:
 
 jobs:
   build:
+    name: 📦 Code Push → Test & Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 🧾 Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Flutter
+      - name: 🛠️ Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
           cache: true
 
-      - name: Flutter pub get
+      - name: 📥 Flutter pub get
         run: flutter pub get
 
-      - name: Format check (non-blocking)
+      - name: 🎨 Format check (non-blocking)
         run: dart format --output=none . || true
 
-      - name: Analyze (non-blocking)
+      - name: 🔍 Analyze (non-blocking)
         run: dart analyze . || true
 
-      - name: Run tests
+      - name: 🧪 Run tests
         if: ${{ github.event.inputs.skip_tests != 'true' }}
         run: flutter test
 
-      - name: Build web (production)
+      - name: 🏗️ Build web (production)
         run: flutter build web --release --dart-define=FLAVOR=production
 
-      - name: Upload web artifact
+      - name: 📦 Upload web artifact
         uses: actions/upload-artifact@v4
         with:
           name: web-build-${{ github.sha }}
@@ -46,22 +47,33 @@ jobs:
           retention-days: 7
 
   deploy:
+    name: 🚀 Deploy to Google Cloud (Firebase Hosting)
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Checkout
+      - name: 🧾 Checkout
         uses: actions/checkout@v4
 
-      - name: Download web artifact
+      - name: 📥 Download web artifact
         uses: actions/download-artifact@v4
         with:
           name: web-build-${{ github.sha }}
           path: build/web/
 
-      - name: Deploy to Firebase Hosting (live)
+      - name: 🚀 Deploy to Firebase Hosting (live)
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: gdgcloud-480509
           channelId: live
+
+  deployed:
+    name: ✅ Deployed
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: 🎉 Deployment complete
+        run: |
+          echo "Deployment finished. Artifact: web-build-${{ github.sha }}"
+          echo "Live URL: https://gdgcloud-480509.web.app"
