@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _authService = AuthService();
   bool _isLoading = false;
   bool _isGoogleLoading = false;
+  bool _isResetting = false;
   bool _obscurePassword = true;
 
   @override
@@ -205,6 +206,122 @@ class _LoginScreenState extends State<LoginScreen> {
     Navigator.pushNamed(context, '/signup');
   }
 
+  Future<void> _showForgotPasswordDialog() async {
+    final emailController = TextEditingController(
+      text: _emailController.text.trim(),
+    );
+    final dialogFormKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            Future<void> sendReset() async {
+              if (isSubmitting) return;
+              if (!dialogFormKey.currentState!.validate()) return;
+              setModalState(() => isSubmitting = true);
+              setState(() => _isResetting = true);
+
+              try {
+                await _authService.sendPasswordResetEmail(
+                  emailController.text.trim(),
+                );
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('Password reset email sent. Check your inbox.'),
+                      backgroundColor: AppColors.success,
+                    ),
+                  );
+                }
+              } on FirebaseAuthException catch (e) {
+                String message =
+                    'Could not send reset email. Please try again.';
+                if (e.code == 'invalid-email') {
+                  message = 'That email looks invalid.';
+                } else if (e.code == 'user-not-found') {
+                  message =
+                      'No account found for that email. Create one or try another.';
+                }
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('Something went wrong. Please try again later.'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } finally {
+                if (mounted) {
+                  setState(() => _isResetting = false);
+                }
+                if (mounted) {
+                  setModalState(() => isSubmitting = false);
+                }
+              }
+            }
+
+            return AlertDialog(
+              title: const Text('Forgot Password'),
+              content: Form(
+                key: dialogFormKey,
+                child: TextFormField(
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: const InputDecoration(
+                    labelText: 'Email',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    if (!value.contains('@')) {
+                      return 'Please enter a valid email';
+                    }
+                    return null;
+                  },
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting ? null : sendReset,
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text('Send'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    emailController.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -355,6 +472,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         }
                         return null;
                       },
+                    ),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed:
+                            _isResetting ? null : _showForgotPasswordDialog,
+                        child: const Text('Forgot password?'),
+                      ),
                     ),
                     const SizedBox(height: 28),
                     SizedBox(

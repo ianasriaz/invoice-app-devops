@@ -146,13 +146,13 @@ class _SplashScreenState extends State<SplashScreen>
   Widget _buildSecondScreen() {
     final screenSize = MediaQuery.of(context).size;
     final isMobile = screenSize.width < 600;
-    
+
     // Responsive sizing based on screen width
     final logoSize = isMobile ? 80.0 : 100.0;
     final titleFontSize = isMobile ? 24.0 : 28.0;
     final subtitleFontSize = isMobile ? 13.0 : 15.0;
     final horizontalPadding = isMobile ? 20.0 : 32.0;
-    
+
     return Container(
       key: const ValueKey('second'),
       decoration: const BoxDecoration(
@@ -164,7 +164,8 @@ class _SplashScreenState extends State<SplashScreen>
       ),
       child: SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
+          padding:
+              EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 20),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -193,7 +194,8 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF4F46E5).withOpacity(0.05),
+                                color:
+                                    const Color(0xFF4F46E5).withOpacity(0.05),
                                 blurRadius: 20,
                                 spreadRadius: 4,
                               ),
@@ -225,7 +227,8 @@ class _SplashScreenState extends State<SplashScreen>
                       SizedBox(height: logoSize * 0.175),
                       // Subtitle with responsive font size and better wrapping
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 0),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isMobile ? 8.0 : 0),
                         child: Text(
                           'Professional Invoice Management',
                           style: TextStyle(
