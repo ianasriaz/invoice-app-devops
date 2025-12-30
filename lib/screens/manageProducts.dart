@@ -322,7 +322,7 @@ class _ManageProductsState extends State<ManageProducts> {
   Widget _buildDropdown(
       TextEditingController controller, Function(String?) onChanged) {
     return DropdownButtonFormField<String>(
-      value: controller.text == '' || controller.text == 'Unselected'
+      initialValue: controller.text == '' || controller.text == 'Unselected'
           ? 'Unselected'
           : controller.text,
       decoration: InputDecoration(

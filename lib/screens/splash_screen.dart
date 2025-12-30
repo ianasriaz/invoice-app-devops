@@ -303,8 +303,6 @@ class _SplashScreenState extends State<SplashScreen>
                     width: double.infinity,
                     height: isMobile ? 52.0 : 56.0,
                     child: Builder(builder: (context) {
-                      final primaryColor =
-                          Theme.of(context).colorScheme.primary;
                       return OutlinedButton(
                         onPressed: _goToSignup,
                         style: OutlinedButton.styleFrom(

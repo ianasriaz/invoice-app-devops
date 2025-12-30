@@ -1,8 +1,9 @@
+﻿import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-// KEEP YOUR EXISTING IMPORTS
+import 'package:flutter/services.dart';
+import 'package:gsheet/constants/app_colors.dart';
 import 'package:gsheet/screens/account_screen.dart';
 import 'package:gsheet/screens/create_invoice_screen.dart';
 import 'package:gsheet/screens/drawer.dart';
@@ -20,9 +21,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  // Will use theme colors dynamically
-  late Color _brandColor;
-  late Color _bgColor;
+  Color _brandColor = AppColors.primary;
 
   late AnimationController _mainController;
   late AnimationController _pulseController;
@@ -33,15 +32,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {
-          final theme = Theme.of(context);
-          _brandColor = theme.colorScheme.primary;
-          _bgColor = theme.scaffoldBackgroundColor;
-        });
-      }
-    });
     _mainController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -54,14 +44,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     _fadeAnimation = CurvedAnimation(
       parent: _mainController,
-      curve: Curves.easeOutCubic,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
     );
 
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
     _mainController.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _brandColor = Theme.of(context).colorScheme.primary;
   }
 
   @override
@@ -72,667 +68,533 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _onRefresh() async {
+    HapticFeedback.lightImpact();
     setState(() {});
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 800));
+  }
+
+  String _getGreeting() {
+    var hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  // Responsive breakpoints
+  bool _isSmallMobile(double width) => width < 360;
+  bool _isMobile(double width) => width < 600;
+  bool _isTablet(double width) => width >= 600 && width < 900;
+  bool _isDesktop(double width) => width >= 900;
+
+  int _getCrossAxisCount(double width) {
+    if (width >= 1200) return 4;
+    if (width >= 900) return 3;
+    if (width >= 600) return 2;
+    return 2;
+  }
+
+  double _getChildAspectRatio(double width) {
+    if (width >= 1200) return 1.3;
+    if (width >= 900) return 1.2;
+    if (width >= 600) return 1.15;
+    return 1.0;
   }
 
   @override
   Widget build(BuildContext context) {
     final userId = FirebaseAuth.instance.currentUser!.uid;
+    final size = MediaQuery.of(context).size;
+    final width = size.width;
+    final isDesktop = _isDesktop(width);
+    final isMobile = _isMobile(width);
+    final horizontalPadding = isDesktop ? 40.0 : (isMobile ? 20.0 : 32.0);
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: _bgColor,
+      backgroundColor: const Color(0xFFF8F9FD),
       drawer: const AppDrawer(),
-      body: RefreshIndicator(
-        onRefresh: _onRefresh,
-        color: _brandColor,
-        backgroundColor: Colors.white,
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(
-              parent: AlwaysScrollableScrollPhysics()),
-          slivers: [
-            // Enhanced Header with Gradient
-            SliverToBoxAdapter(
-              child: _buildEnhancedHeader(context),
-            ),
-
-            // Stats Section with Improved Design
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverToBoxAdapter(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('invoices')
-                      .where('userId', isEqualTo: userId)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    int totalInvoices = 0;
-                    int paidCount = 0;
-                    double totalRevenue = 0;
-                    int pendingCount = 0;
-
-                    if (snapshot.hasData) {
-                      totalInvoices = snapshot.data!.docs.length;
-                      for (var doc in snapshot.data!.docs) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final status = data['status'] as String?;
-                        final total =
-                            double.tryParse(data['total']?.toString() ?? '0') ??
-                                0.0;
-
-                        if (status == 'paid') {
-                          paidCount++;
-                          totalRevenue += total;
-                        } else if (status == 'sent' || status == 'draft') {
-                          pendingCount++;
-                        }
-                      }
-                    }
-
-                    return FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 24),
-                          _sectionHeader('Overview'),
-                          const SizedBox(height: 16),
-
-                          // Enhanced Revenue Card with Gradient
-                          _buildEnhancedRevenueCard(totalRevenue),
-
-                          const SizedBox(height: 16),
-
-                          // Enhanced Stats - Responsive Layout
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final isMobile =
-                                  MediaQuery.of(context).size.width < 500;
-                              if (isMobile) {
-                                return Column(
-                                  children: [
-                                    // Invoices Full Width
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: _EnhancedStatBadge(
-                                        label: 'Invoices',
-                                        value: totalInvoices.toString(),
-                                        icon: Icons.receipt_long_rounded,
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.7),
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        delay: 100,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    // Pending + Paid Row
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: _EnhancedStatBadge(
-                                            label: 'UnPaid',
-                                            value: pendingCount.toString(),
-                                            icon: Icons.hourglass_top_rounded,
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                Colors.orange[400]!,
-                                                Colors.orange[600]!
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                            delay: 200,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: _EnhancedStatBadge(
-                                            label: 'Paid',
-                                            value: paidCount.toString(),
-                                            icon: Icons.check_circle_rounded,
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                                    .withOpacity(0.7),
-                                                Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                            delay: 300,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                );
-                              } else {
-                                // Desktop: 3 in a row
-                                return Row(
-                                  children: [
-                                    Expanded(
-                                      child: _EnhancedStatBadge(
-                                        label: 'Invoices',
-                                        value: totalInvoices.toString(),
-                                        icon: Icons.receipt_long_rounded,
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.7),
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        delay: 100,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _EnhancedStatBadge(
-                                        label: 'UnPaid',
-                                        value: pendingCount.toString(),
-                                        icon: Icons.hourglass_top_rounded,
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.7),
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        delay: 200,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: _EnhancedStatBadge(
-                                        label: 'Paid',
-                                        value: paidCount.toString(),
-                                        icon: Icons.check_circle_rounded,
-                                        gradient: LinearGradient(
-                                          colors: [
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                                .withOpacity(0.7),
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        delay: 300,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-                            },
-                          ),
+      body: Stack(
+        children: [
+          // Enhanced ambient background with multiple blur circles
+          Positioned(
+            top: -150,
+            left: -100,
+            child: AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) => Transform.scale(
+                scale: _pulseAnimation.value,
+                child: ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                  child: Container(
+                    height: 400,
+                    width: 400,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          _brandColor.withOpacity(0.15),
+                          _brandColor.withOpacity(0.05),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
               ),
             ),
+          ),
 
-            // Actions Section
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 32, 20, 20),
-              sliver: SliverToBoxAdapter(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: _sectionHeader('Quick Actions'),
+          Positioned(
+            bottom: -100,
+            right: -100,
+            child: ImageFiltered(
+              imageFilter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+              child: Container(
+                height: 350,
+                width: 350,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      Colors.purple.withOpacity(0.08),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
             ),
+          ),
 
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              sliver: SliverGrid.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                // Make cards taller on narrow screens to avoid overflow
-                childAspectRatio:
-                    MediaQuery.of(context).size.width < 380 ? 0.95 : 1.25,
-                children: [
-                  _EnhancedActionCard(
-                    title: 'New Invoice',
-                    icon: Icons.add_circle_outline_rounded,
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary,
-                        Theme.of(context).colorScheme.primary.withOpacity(0.7)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    delay: 400,
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CreateInvoiceScreen())),
+          // Main content
+          SafeArea(
+            child: RefreshIndicator(
+              onRefresh: _onRefresh,
+              color: _brandColor,
+              backgroundColor: Colors.white,
+              strokeWidth: 3,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                slivers: [
+                  // Header
+                  SliverToBoxAdapter(
+                    child: _buildHeader(context, horizontalPadding, isMobile),
                   ),
-                  _EnhancedActionCard(
-                    title: 'View Invoices',
-                    icon: Icons.list_alt_rounded,
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF2D3436),
-                        const Color(0xFF3D4448)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    delay: 500,
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const InvoicesListScreen())),
+
+                  // Data Stream
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('invoices')
+                        .where('userId', isEqualTo: userId)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      int totalInvoices = 0;
+                      int paidCount = 0;
+                      double totalRevenue = 0;
+                      int pendingCount = 0;
+
+                      if (snapshot.hasData) {
+                        totalInvoices = snapshot.data!.docs.length;
+                        for (var doc in snapshot.data!.docs) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final status = data['status'] as String?;
+                          final total = double.tryParse(
+                                  data['total']?.toString() ?? '0') ??
+                              0.0;
+
+                          if (status == 'paid') {
+                            paidCount++;
+                            totalRevenue += total;
+                          } else if (status == 'sent' || status == 'draft') {
+                            pendingCount++;
+                          }
+                        }
+                      }
+
+                      return SliverPadding(
+                        padding:
+                            EdgeInsets.symmetric(horizontal: horizontalPadding),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            SizedBox(height: isMobile ? 16 : 20),
+
+                            // Revenue Card
+                            FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: _EnhancedRevenueCard(
+                                revenue: totalRevenue,
+                                brandColor: _brandColor,
+                                isMobile: isMobile,
+                              ),
+                            ),
+
+                            SizedBox(height: isMobile ? 28 : 40),
+
+                            // Overview Stats
+                            FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: _sectionTitle('Overview', isMobile),
+                            ),
+                            SizedBox(height: isMobile ? 12 : 16),
+                            _buildStatsRow(
+                              totalInvoices,
+                              pendingCount,
+                              paidCount,
+                              isMobile,
+                            ),
+
+                            SizedBox(height: isMobile ? 28 : 40),
+
+                            // Quick Actions Title
+                            FadeTransition(
+                              opacity: _fadeAnimation,
+                              child: _sectionTitle('Quick Actions', isMobile),
+                            ),
+                          ]),
+                        ),
+                      );
+                    },
                   ),
-                  _EnhancedActionCard(
-                    title: 'Manage Clients',
-                    icon: Icons.people_alt_rounded,
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                        Theme.of(context).colorScheme.primary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+
+                  // Quick Actions Grid
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      isMobile ? 12 : 16,
+                      horizontalPadding,
+                      100,
                     ),
-                    delay: 600,
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ManageClientsScreen())),
-                  ),
-                  _EnhancedActionCard(
-                    title: 'Manage Services',
-                    icon: Icons.design_services_rounded,
-                    gradient: LinearGradient(
-                      colors: [
-                        Theme.of(context).colorScheme.primary.withOpacity(0.7),
-                        Theme.of(context).colorScheme.primary,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    sliver: SliverGrid(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: _getCrossAxisCount(width),
+                        childAspectRatio: _getChildAspectRatio(width),
+                        crossAxisSpacing: isMobile ? 16 : 20,
+                        mainAxisSpacing: isMobile ? 16 : 20,
+                      ),
+                      delegate: SliverChildListDelegate([
+                        _EnhancedActionCard(
+                          title: 'New Invoice',
+                          icon: Icons.add_circle_outline_rounded,
+                          accentColor: _brandColor,
+                          delay: 200,
+                          isMobile: isMobile,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const CreateInvoiceScreen(),
+                            ),
+                          ),
+                        ),
+                        _EnhancedActionCard(
+                          title: 'Invoices',
+                          icon: Icons.description_outlined,
+                          accentColor: const Color(0xFF2196F3),
+                          delay: 300,
+                          isMobile: isMobile,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const InvoicesListScreen(),
+                            ),
+                          ),
+                        ),
+                        _EnhancedActionCard(
+                          title: 'Clients',
+                          icon: Icons.people_outline_rounded,
+                          accentColor: const Color(0xFFFF9800),
+                          delay: 400,
+                          isMobile: isMobile,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ManageClientsScreen(),
+                            ),
+                          ),
+                        ),
+                        _EnhancedActionCard(
+                          title: 'Services',
+                          icon: Icons.category_outlined,
+                          accentColor: const Color(0xFF9C27B0),
+                          delay: 500,
+                          isMobile: isMobile,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ManageServicesScreen(),
+                            ),
+                          ),
+                        ),
+                      ]),
                     ),
-                    delay: 700,
-                    onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const ManageServicesScreen())),
                   ),
                 ],
               ),
             ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
-          ],
-        ),
+          ),
+        ],
       ),
-      floatingActionButton: ScaleTransition(
-        scale: _fadeAnimation,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Theme.of(context).colorScheme.primary,
-                Theme.of(context).colorScheme.primary.withOpacity(0.8)
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      floatingActionButton: _EnhancedFAB(
+        brandColor: _brandColor,
+        isMobile: isMobile,
+        onPressed: () {
+          HapticFeedback.mediumImpact();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const CreateInvoiceScreen(),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: _brandColor.withOpacity(0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: FloatingActionButton.extended(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const CreateInvoiceScreen()),
-            ),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-            label: const Text(
-              'Create',
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                color: Colors.white,
-                fontSize: 16,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 
-  // Enhanced Header with Multi-layer Gradient
-  Widget _buildEnhancedHeader(BuildContext context) {
-    final theme = Theme.of(context);
+  Widget _buildHeader(BuildContext context, double padding, bool isMobile) {
     return Container(
-      // Sleek compact header with purple background
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary,
-        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
+      padding: EdgeInsets.fromLTRB(
+        padding,
+        isMobile ? 16 : 24,
+        padding,
+        isMobile ? 16 : 20,
       ),
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            // Menu icon
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.menu_rounded, color: Colors.white),
-                iconSize: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Logo and title
-            Expanded(
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.receipt_long_rounded,
-                      color: theme.colorScheme.primary,
-                      size: 18,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'INVOICO',
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Greetings
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Text(
+                    _getGreeting(),
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1,
+                      fontSize: isMobile ? 13 : 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                      letterSpacing: 0.3,
                     ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 4),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Text(
+                    'Dashboard',
+                    style: TextStyle(
+                      fontSize: isMobile ? 26 : 32,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.grey[900],
+                      letterSpacing: -0.8,
+                      height: 1.2,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            // Profile icon
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: IconButton(
-                icon: const Icon(Icons.person_outline_rounded,
-                    color: Colors.white),
-                iconSize: 20,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                onPressed: () {
+          ),
+
+          // Action Icons
+          Row(
+            children: [
+              _GlassButton(
+                icon: Icons.person_rounded,
+                isMobile: isMobile,
+                onTap: () {
+                  HapticFeedback.lightImpact();
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const AccountScreen()),
                   );
                 },
               ),
-            ),
-          ],
-        ),
+              SizedBox(width: isMobile ? 8 : 12),
+              _GlassButton(
+                icon: Icons.menu_rounded,
+                isMobile: isMobile,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _scaffoldKey.currentState?.openDrawer();
+                },
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _sectionHeader(String title) {
+  Widget _sectionTitle(String title, bool isMobile) {
     return Text(
       title.toUpperCase(),
       style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w700,
+        fontSize: isMobile ? 11 : 12,
+        fontWeight: FontWeight.w900,
         color: Colors.grey[700],
-        letterSpacing: 2,
+        letterSpacing: 1.5,
       ),
     );
   }
 
-  Widget _buildEnhancedRevenueCard(double revenue) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.85, end: 1.0),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeOutBack,
-      builder: (context, val, child) =>
-          Transform.scale(scale: val, child: child),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(28),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Theme.of(context).colorScheme.primary,
-              Theme.of(context).colorScheme.primary.withOpacity(0.7),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: _brandColor.withOpacity(0.3),
-              blurRadius: 25,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStatsRow(int total, int pending, int paid, bool isMobile) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final spacing = isMobile ? 12.0 : 16.0;
+
+        return Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: const Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) => Transform.scale(
-                    scale: _pulseAnimation.value,
-                    child: Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.trending_up_rounded,
-                        color: Colors.white,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Total Revenue',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.5,
+            Expanded(
+              child: _EnhancedStatCard(
+                label: 'Invoices',
+                value: total.toString(),
+                icon: Icons.receipt_long_outlined,
+                color: const Color(0xFF607D8B),
+                delay: 100,
+                isMobile: isMobile,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Rs ${revenue.toStringAsFixed(0)}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 36,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -1,
-                shadows: [
-                  Shadow(
-                    color: Colors.black12,
-                    offset: Offset(0, 2),
-                    blurRadius: 4,
-                  ),
-                ],
+            SizedBox(width: spacing),
+            Expanded(
+              child: _EnhancedStatCard(
+                label: 'Pending',
+                value: pending.toString(),
+                icon: Icons.hourglass_empty_rounded,
+                color: const Color(0xFFFF9800),
+                delay: 200,
+                isMobile: isMobile,
+              ),
+            ),
+            SizedBox(width: spacing),
+            Expanded(
+              child: _EnhancedStatCard(
+                label: 'Paid',
+                value: paid.toString(),
+                icon: Icons.check_circle_outline_rounded,
+                color: const Color(0xFF4CAF50),
+                delay: 300,
+                isMobile: isMobile,
               ),
             ),
           ],
-        ),
-      ),
+        );
+      },
     );
   }
 }
 
-// Enhanced Stat Badge
-class _EnhancedStatBadge extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final LinearGradient gradient;
-  final int delay;
+// Enhanced Revenue Card
+class _EnhancedRevenueCard extends StatelessWidget {
+  final double revenue;
+  final Color brandColor;
+  final bool isMobile;
 
-  const _EnhancedStatBadge({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.gradient,
-    required this.delay,
+  const _EnhancedRevenueCard({
+    required this.revenue,
+    required this.brandColor,
+    required this.isMobile,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 600 + delay),
-      curve: Curves.easeOutBack,
-      builder: (context, val, child) {
-        final clamped = val.clamp(0.0, 1.0);
-        return Transform.scale(
-          scale: 0.85 + (clamped * 0.15),
-          child: Opacity(opacity: clamped, child: child),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(isMobile ? 24 : 32),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [brandColor, brandColor.withOpacity(0.85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradient.colors.first.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+        borderRadius: BorderRadius.circular(isMobile ? 20 : 24),
+        boxShadow: [
+          BoxShadow(
+            color: brandColor.withOpacity(0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: brandColor.withOpacity(0.2),
+            blurRadius: 48,
+            offset: const Offset(0, 24),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isMobile ? 10 : 12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.account_balance_wallet_rounded,
+                  color: Colors.white,
+                  size: isMobile ? 20 : 24,
+                ),
               ),
-              child: Icon(icon, size: 20, color: Colors.white),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: Colors.black87,
+              const SizedBox(width: 12),
+              Text(
+                'Total Revenue',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: isMobile ? 15 : 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
+            ],
+          ),
+          SizedBox(height: isMobile ? 20 : 24),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Rs ${revenue.toStringAsFixed(0)}',
               style: TextStyle(
-                fontSize: 11,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
+                color: Colors.white,
+                fontSize: isMobile ? 36 : 48,
+                fontWeight: FontWeight.w900,
+                letterSpacing: -1.5,
+                height: 1,
               ),
             ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  'Lifetime',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: isMobile ? 11 : 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'All time earnings',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.85),
+                  fontSize: isMobile ? 12 : 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -742,15 +604,17 @@ class _EnhancedStatBadge extends StatelessWidget {
 class _EnhancedActionCard extends StatefulWidget {
   final String title;
   final IconData icon;
-  final LinearGradient gradient;
+  final Color accentColor;
   final int delay;
+  final bool isMobile;
   final VoidCallback onTap;
 
   const _EnhancedActionCard({
     required this.title,
     required this.icon,
-    required this.gradient,
+    required this.accentColor,
     required this.delay,
+    required this.isMobile,
     required this.onTap,
   });
 
@@ -764,75 +628,273 @@ class _EnhancedActionCardState extends State<_EnhancedActionCard> {
   @override
   Widget build(BuildContext context) {
     return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.7, end: 1.0),
+      tween: Tween(begin: 0.0, end: 1.0),
       duration: Duration(milliseconds: 700 + widget.delay),
-      curve: Curves.easeOutBack,
-      builder: (context, val, child) =>
-          Transform.scale(scale: val, child: child),
+      curve: Curves.easeOutCubic,
+      builder: (context, val, child) => Transform.scale(
+        scale: val * (_isPressed ? 0.95 : 1.0),
+        child: child,
+      ),
       child: GestureDetector(
         onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) {
-          setState(() => _isPressed = false);
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: () {
+          HapticFeedback.lightImpact();
           widget.onTap();
         },
-        onTapCancel: () => setState(() => _isPressed = false),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          transform: Matrix4.identity()
-            ..scale(_isPressed ? 0.92 : 1.0)
-            ..rotateZ(_isPressed ? -0.01 : 0.0),
+        child: Container(
           decoration: BoxDecoration(
-            gradient: widget.gradient,
-            borderRadius: BorderRadius.circular(24),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(widget.isMobile ? 20 : 24),
+            border: Border.all(
+              color: widget.accentColor.withOpacity(0.1),
+              width: 1.5,
+            ),
             boxShadow: [
               BoxShadow(
-                color: widget.gradient.colors.first.withOpacity(0.4),
-                blurRadius: _isPressed ? 10 : 20,
-                offset: Offset(0, _isPressed ? 4 : 10),
+                color: widget.accentColor.withOpacity(0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.25),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.3),
-                      width: 1.5,
-                    ),
-                  ),
-                  child: Icon(widget.icon, color: Colors.white, size: 24),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 0.3,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black12,
-                        offset: Offset(0, 1),
-                        blurRadius: 2,
-                      ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.all(widget.isMobile ? 14 : 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      widget.accentColor.withOpacity(0.15),
+                      widget.accentColor.withOpacity(0.08),
                     ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  shape: BoxShape.circle,
                 ),
-              ],
-            ),
+                child: Icon(
+                  widget.icon,
+                  color: widget.accentColor,
+                  size: widget.isMobile ? 28 : 32,
+                ),
+              ),
+              SizedBox(height: widget.isMobile ? 12 : 16),
+              Text(
+                widget.title,
+                style: TextStyle(
+                  fontSize: widget.isMobile ? 14 : 15,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[900],
+                  letterSpacing: 0.2,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Enhanced Stat Card
+class _EnhancedStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final int delay;
+  final bool isMobile;
+
+  const _EnhancedStatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+    required this.delay,
+    required this.isMobile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 700 + delay),
+      curve: Curves.easeOutCubic,
+      builder: (context, val, child) => Transform.scale(
+        scale: val,
+        child: Opacity(opacity: val, child: child),
+      ),
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          vertical: isMobile ? 20 : 24,
+          horizontal: isMobile ? 12 : 16,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
+          border: Border.all(color: color.withOpacity(0.1), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(isMobile ? 8 : 10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: isMobile ? 20 : 24,
+              ),
+            ),
+            SizedBox(height: isMobile ? 10 : 12),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: isMobile ? 20 : 24,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.grey[900],
+                  height: 1,
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: isMobile ? 11 : 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Enhanced Glass Button
+class _GlassButton extends StatefulWidget {
+  final IconData icon;
+  final bool isMobile;
+  final VoidCallback onTap;
+
+  const _GlassButton({
+    required this.icon,
+    required this.isMobile,
+    required this.onTap,
+  });
+
+  @override
+  State<_GlassButton> createState() => _GlassButtonState();
+}
+
+class _GlassButtonState extends State<_GlassButton> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = widget.isMobile ? 42.0 : 48.0;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.9 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(widget.isMobile ? 12 : 14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Icon(
+            widget.icon,
+            color: Colors.grey[800],
+            size: widget.isMobile ? 20 : 22,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Enhanced FAB
+class _EnhancedFAB extends StatelessWidget {
+  final Color brandColor;
+  final bool isMobile;
+  final VoidCallback onPressed;
+
+  const _EnhancedFAB({
+    required this.brandColor,
+    required this.isMobile,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: onPressed,
+      backgroundColor: brandColor,
+      elevation: 8,
+      highlightElevation: 12,
+      icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+      label: Text(
+        "Create Invoice",
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          fontSize: isMobile ? 14 : 15,
+          letterSpacing: 0.3,
+        ),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
       ),
     );
   }

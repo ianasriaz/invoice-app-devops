@@ -21,6 +21,62 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
 
+  // Password validation flags
+  bool _hasMinLength = false;
+  bool _hasUpperCase = false;
+  bool _hasLowerCase = false;
+  bool _hasNumber = false;
+  bool _hasSpecialChar = false;
+  bool _passwordsMatch = false;
+
+  bool _isValidEmail(String value) {
+    final emailRegex =
+        RegExp(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
+    return emailRegex.hasMatch(value.trim());
+  }
+
+  void _updatePasswordValidation(String value) {
+    setState(() {
+      _hasMinLength = value.length >= 8;
+      _hasUpperCase = RegExp(r'[A-Z]').hasMatch(value);
+      _hasLowerCase = RegExp(r'[a-z]').hasMatch(value);
+      _hasNumber = RegExp(r'\d').hasMatch(value);
+      _hasSpecialChar =
+          RegExp(r'[!@#\$%^&*(),.?":{}|<>\-_=+\[\]~`/]').hasMatch(value);
+      _passwordsMatch =
+          value.isNotEmpty && value == _confirmPasswordController.text;
+    });
+  }
+
+  void _updateConfirmPasswordValidation() {
+    setState(() {
+      _passwordsMatch =
+          _passwordController.text == _confirmPasswordController.text;
+    });
+  }
+
+  String? _validateStrongPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter your password';
+    }
+    if (value.length < 8) {
+      return 'Password must be at least 8 characters';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Add at least one uppercase letter';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Add at least one lowercase letter';
+    }
+    if (!RegExp(r'\d').hasMatch(value)) {
+      return 'Add at least one number';
+    }
+    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>\-_=+\[\]~`/]').hasMatch(value)) {
+      return 'Add at least one special character';
+    }
+    return null;
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -374,8 +430,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
+                        if (!_isValidEmail(value)) {
+                          return 'Enter a valid email address';
                         }
                         return null;
                       },
@@ -384,6 +440,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
+                      onChanged: _updatePasswordValidation,
                       decoration: InputDecoration(
                         labelText: 'Password',
                         prefixIcon: Icon(Icons.lock_outline,
@@ -423,19 +480,16 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                       ),
                       validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
+                        return _validateStrongPassword(value);
                       },
                     ),
+                    const SizedBox(height: 12),
+                    _buildPasswordRequirementsIndicator(),
                     const SizedBox(height: 14),
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
+                      onChanged: (_) => _updateConfirmPasswordValidation(),
                       decoration: InputDecoration(
                         labelText: 'Confirm Password',
                         prefixIcon: Icon(Icons.lock_outline_rounded,
@@ -461,22 +515,31 @@ class _SignupScreenState extends State<SignupScreen> {
                           borderSide:
                               const BorderSide(color: Colors.red, width: 1),
                         ),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscureConfirmPassword
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.grey[600],
-                          ),
-                          onPressed: () {
-                            setState(() => _obscureConfirmPassword =
-                                !_obscureConfirmPassword);
-                          },
-                        ),
+                        suffixIcon: _passwordsMatch &&
+                                _confirmPasswordController.text.isNotEmpty
+                            ? Icon(Icons.check_circle,
+                                color: Colors.green[600], size: 24)
+                            : IconButton(
+                                icon: Icon(
+                                  _obscureConfirmPassword
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  color: Colors.grey[600],
+                                ),
+                                onPressed: () {
+                                  setState(() => _obscureConfirmPassword =
+                                      !_obscureConfirmPassword);
+                                },
+                              ),
                       ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please confirm your password';
+                        }
+                        final pwdError = _validateStrongPassword(value);
+                        if (pwdError != null) return pwdError;
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
                         }
                         return null;
                       },
@@ -611,6 +674,78 @@ class _SignupScreenState extends State<SignupScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPasswordRequirementsIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Password must include:',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildRequirementItem(
+            'At least 8 characters',
+            _hasMinLength,
+          ),
+          const SizedBox(height: 6),
+          _buildRequirementItem(
+            'One uppercase letter (A-Z)',
+            _hasUpperCase,
+          ),
+          const SizedBox(height: 6),
+          _buildRequirementItem(
+            'One lowercase letter (a-z)',
+            _hasLowerCase,
+          ),
+          const SizedBox(height: 6),
+          _buildRequirementItem(
+            'One number (0-9)',
+            _hasNumber,
+          ),
+          const SizedBox(height: 6),
+          _buildRequirementItem(
+            'One special character (!@#\$%^&*)',
+            _hasSpecialChar,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequirementItem(String text, bool isMet) {
+    return Row(
+      children: [
+        Icon(
+          isMet ? Icons.check_circle : Icons.radio_button_unchecked,
+          size: 16,
+          color: isMet ? Colors.green[600] : Colors.grey[400],
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: isMet ? Colors.green[700] : Colors.grey[600],
+              fontWeight: isMet ? FontWeight.w500 : FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

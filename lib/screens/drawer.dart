@@ -1,7 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gsheet/constants/app_colors.dart';
-import 'package:gsheet/screens/auth/login_screen.dart';
 import 'package:gsheet/services/auth_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -19,11 +18,9 @@ class _AppDrawerState extends State<AppDrawer> {
     try {
       await _authService.signOut();
       if (mounted) {
-        // Navigate to login using direct widget navigation
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => LoginScreen()),
-          (Route<dynamic> route) => false,
-        );
+        // Navigate to login using named route
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {
       if (mounted) {

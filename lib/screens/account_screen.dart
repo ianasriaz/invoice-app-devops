@@ -2,7 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:gsheet/constants/app_colors.dart';
 import 'package:gsheet/services/auth_service.dart';
-import 'package:gsheet/screens/auth/login_screen.dart';
 
 class AccountScreen extends StatefulWidget {
   const AccountScreen({Key? key}) : super(key: key);
@@ -41,10 +40,8 @@ class _AccountScreenState extends State<AccountScreen> {
       try {
         await _authService.signOut();
         if (mounted) {
-          Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (context) => LoginScreen()),
-            (Route<dynamic> route) => false,
-          );
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/login', (route) => false);
         }
       } catch (e) {
         if (mounted) {

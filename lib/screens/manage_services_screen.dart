@@ -101,7 +101,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                         Expanded(
                           flex: 2,
                           child: DropdownButtonFormField<String>(
-                            value: selectedUnit,
+                            initialValue: selectedUnit,
                             icon: const Icon(Icons.keyboard_arrow_down_rounded),
                             decoration: InputDecoration(
                               labelText: 'Unit',
