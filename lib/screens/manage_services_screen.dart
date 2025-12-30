@@ -88,7 +88,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                           child: _buildTextField(
                             controller: rateController,
                             label: 'Charges (PKR)',
-                            icon: Icons.currency_rupee,
+                            icon: Icons.currency_exchange,
                             inputType: TextInputType.number,
                             validator: (v) {
                               if (v!.isEmpty) return 'Required';
