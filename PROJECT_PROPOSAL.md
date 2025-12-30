@@ -1,11 +1,11 @@
-# PROJECT PROPOSAL: Invoice Generator Mobile Application
+# PROJECT PROPOSAL: INVOICO - Invoice Generator Mobile Application
 
 ---
 
 ## 1. TITLE PAGE
 
 ### Project Title
-**Invoice Generator Mobile Application** - A Cross-Platform Invoice Management System
+**Invoice Generator Mobile Application** - INVOICO - A Cross-Platform Invoice Management System
 
 ### Student Information
 **Student Name(s):** [Your Name]  
