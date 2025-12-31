@@ -153,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      Colors.purple.withOpacity(0.08),
+                      AppColors.primary.withOpacity(0.08),
                       Colors.transparent,
                     ],
                   ),

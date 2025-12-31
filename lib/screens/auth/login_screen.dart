@@ -151,11 +151,11 @@ class _LoginScreenState extends State<LoginScreen>
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.mark_email_unread_rounded,
-                  color: Colors.orange, size: 24),
+              child: Icon(Icons.mark_email_unread_rounded,
+                  color: Theme.of(context).colorScheme.primary, size: 24),
             ),
             const SizedBox(width: 12),
             const Text('Verify Email', style: TextStyle(fontSize: 20)),
@@ -197,7 +197,7 @@ class _LoginScreenState extends State<LoginScreen>
               }
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),

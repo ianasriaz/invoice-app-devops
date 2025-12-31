@@ -118,10 +118,7 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       flex: 2,
-                      child: DropdownButtonFormField<String>(
-                        value: selectedUnit,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        style: TextStyle(color: Colors.grey[800], fontSize: 15),
+                      child: InputDecorator(
                         decoration: InputDecoration(
                           labelText: 'Unit',
                           filled: true,
@@ -134,19 +131,30 @@ class _ManageServicesScreenState extends State<ManageServicesScreen> {
                             borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide(color: Colors.grey[200]!),
                           ),
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 12),
                         ),
-                        items: _units.map((unit) {
-                          return DropdownMenuItem(
-                            value: unit,
-                            child: Text(
-                              unit.capitalize(),
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.w500),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) =>
-                            setState(() => selectedUnit = value!),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: selectedUnit,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                            style: TextStyle(
+                                color: Colors.grey[800], fontSize: 15),
+                            onChanged: (value) =>
+                                setState(() => selectedUnit = value ?? 'hour'),
+                            items: _units.map((unit) {
+                              return DropdownMenuItem(
+                                value: unit,
+                                child: Text(
+                                  unit.capitalize(),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w500),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
                       ),
                     ),
                   ],

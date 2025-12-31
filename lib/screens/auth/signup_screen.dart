@@ -21,6 +21,9 @@ class _SignupScreenState extends State<SignupScreen>
   final _confirmPasswordController = TextEditingController();
   final _authService = AuthService();
 
+  // Explicit Brand Color
+  final Color _brandColor = const Color(0xFF453DCA); // #453dca
+
   bool _isLoading = false;
   bool _isGoogleLoading = false;
   bool _obscurePassword = true;
@@ -277,14 +280,14 @@ class _SignupScreenState extends State<SignupScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: _brandColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 _emailController.text.trim(),
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.primary,
+                  color: _brandColor,
                   fontSize: 14,
                 ),
               ),
@@ -374,14 +377,12 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final size = MediaQuery.of(context).size;
     final isMobile = _isMobile(size.width);
     final horizontalPadding = _getHorizontalPadding(size.width);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-        backgroundColor: AppColors.lightBackground,
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -399,8 +400,7 @@ class _SignupScreenState extends State<SignupScreen>
             ],
           ),
           child: IconButton(
-            icon: Icon(Icons.arrow_back_rounded,
-                color: theme.colorScheme.primary),
+            icon: Icon(Icons.arrow_back_rounded, color: _brandColor),
             onPressed: () {
               HapticFeedback.lightImpact();
               Navigator.of(context).pop();
@@ -427,9 +427,9 @@ class _SignupScreenState extends State<SignupScreen>
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          theme.colorScheme.primary.withOpacity(0.15),
-                            theme.colorScheme.primary.withOpacity(0.15),
-                            theme.colorScheme.primary.withOpacity(0.05),
+                          _brandColor.withOpacity(0.15),
+                          _brandColor.withOpacity(0.05),
+                        ],
                       ),
                     ),
                   ),
@@ -450,9 +450,9 @@ class _SignupScreenState extends State<SignupScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      colors: [
-                        AppColors.secondary.withOpacity(0.12),
-                        Colors.transparent,
+                      AppColors.secondary.withOpacity(0.12),
+                      Colors.transparent,
+                    ],
                   ),
                 ),
               ),
@@ -493,21 +493,23 @@ class _SignupScreenState extends State<SignupScreen>
                                   padding: const EdgeInsets.all(20),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                        colors: [
-                                          AppColors.primary,
-                                          AppColors.primaryLight,
+                                      colors: [
+                                        _brandColor,
+                                        _brandColor.withOpacity(
+                                            0.8), // Softer gradient
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                          color: AppColors.primary.withOpacity(0.3),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.green.withOpacity(0.3),
+                                        color: _brandColor.withOpacity(0.3),
                                         blurRadius: 20,
                                         offset: const Offset(0, 10),
                                       ),
                                     ],
+                                    borderRadius: BorderRadius.circular(
+                                        20), // Soft corners
                                   ),
                                   child: const Icon(
                                     Icons.person_add_rounded,
@@ -642,8 +644,6 @@ class _SignupScreenState extends State<SignupScreen>
                                 if (value == null || value.isEmpty) {
                                   return 'Please confirm your password';
                                 }
-                                final pwdError = _validateStrongPassword(value);
-                                if (pwdError != null) return pwdError;
                                 if (value != _passwordController.text) {
                                   return 'Passwords do not match';
                                 }
@@ -659,7 +659,7 @@ class _SignupScreenState extends State<SignupScreen>
                               isLoading: _isLoading,
                               text: 'Create Account',
                               isPrimary: true,
-                              color: Colors.green,
+                              color: _brandColor, // Using brand color
                               height: isMobile ? 52 : 56,
                             ),
 
@@ -698,6 +698,7 @@ class _SignupScreenState extends State<SignupScreen>
                               isLoading: _isGoogleLoading,
                               height: isMobile ? 52 : 56,
                               isMobile: isMobile,
+                              brandColor: _brandColor,
                             ),
 
                             SizedBox(height: isMobile ? 28 : 32),
@@ -722,7 +723,7 @@ class _SignupScreenState extends State<SignupScreen>
                                   child: Text(
                                     'Login',
                                     style: TextStyle(
-                                      color: theme.colorScheme.primary,
+                                      color: _brandColor,
                                       fontWeight: FontWeight.w700,
                                       fontSize: isMobile ? 14 : 15,
                                     ),
@@ -766,8 +767,7 @@ class _SignupScreenState extends State<SignupScreen>
         labelText: label,
         labelStyle:
             TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w500),
-        prefixIcon:
-            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
+        prefixIcon: Icon(icon, color: _brandColor, size: 22),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.white,
@@ -783,8 +783,7 @@ class _SignupScreenState extends State<SignupScreen>
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.primary, width: 2),
+          borderSide: BorderSide(color: _brandColor, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
@@ -848,6 +847,9 @@ class _SignupScreenState extends State<SignupScreen>
   }
 
   Widget _buildRequirementItem(String text, bool isMet) {
+    // Using Brand color for "Met" state creates better brand cohesion than standard green
+    final Color activeColor = _brandColor;
+
     return Row(
       children: [
         AnimatedContainer(
@@ -855,9 +857,9 @@ class _SignupScreenState extends State<SignupScreen>
           width: 18,
           height: 18,
           decoration: BoxDecoration(
-            color: isMet ? Colors.green : Colors.transparent,
+            color: isMet ? activeColor : Colors.transparent,
             border: Border.all(
-              color: isMet ? Colors.green : Colors.grey[400]!,
+              color: isMet ? activeColor : Colors.grey[400]!,
               width: 2,
             ),
             borderRadius: BorderRadius.circular(4),
@@ -872,7 +874,7 @@ class _SignupScreenState extends State<SignupScreen>
             text,
             style: TextStyle(
               fontSize: 13,
-              color: isMet ? Colors.green[700] : Colors.grey[600],
+              color: isMet ? activeColor : Colors.grey[600],
               fontWeight: isMet ? FontWeight.w600 : FontWeight.w500,
             ),
           ),
@@ -969,12 +971,14 @@ class _GoogleSignInButton extends StatefulWidget {
   final bool isLoading;
   final double height;
   final bool isMobile;
+  final Color brandColor;
 
   const _GoogleSignInButton({
     required this.onPressed,
     required this.isLoading,
     required this.height,
     required this.isMobile,
+    required this.brandColor,
   });
 
   @override
@@ -986,8 +990,6 @@ class _GoogleSignInButtonState extends State<_GoogleSignInButton> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return GestureDetector(
       onTapDown: widget.onPressed != null
           ? (_) => setState(() => _isPressed = true)
@@ -1020,8 +1022,8 @@ class _GoogleSignInButtonState extends State<_GoogleSignInButton> {
                     width: 22,
                     child: CircularProgressIndicator(
                       strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.primary),
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(widget.brandColor),
                     ),
                   )
                 : Row(

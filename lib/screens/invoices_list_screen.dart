@@ -6,8 +6,6 @@ import 'package:flutter/services.dart'; // For HapticFeedback
 import 'package:intl/intl.dart';
 import 'package:gsheet/models/client.dart';
 import 'package:gsheet/models/freelance_invoice.dart' as fi;
-import 'package:gsheet/models/invoice_line_item.dart';
-import 'package:gsheet/models/service.dart';
 import 'package:gsheet/services/pdf_service.dart';
 import 'package:gsheet/screens/create_invoice_screen.dart';
 import 'package:gsheet/constants/app_colors.dart';
