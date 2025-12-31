@@ -381,7 +381,7 @@ class _SignupScreenState extends State<SignupScreen>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
-      extendBodyBehindAppBar: true,
+        backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -428,8 +428,8 @@ class _SignupScreenState extends State<SignupScreen>
                       gradient: RadialGradient(
                         colors: [
                           theme.colorScheme.primary.withOpacity(0.15),
-                          theme.colorScheme.primary.withOpacity(0.05),
-                        ],
+                            theme.colorScheme.primary.withOpacity(0.15),
+                            theme.colorScheme.primary.withOpacity(0.05),
                       ),
                     ),
                   ),
@@ -450,9 +450,9 @@ class _SignupScreenState extends State<SignupScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      Colors.green.withOpacity(0.1),
-                      Colors.transparent,
-                    ],
+                      colors: [
+                        AppColors.secondary.withOpacity(0.12),
+                        Colors.transparent,
                   ),
                 ),
               ),
@@ -493,14 +493,14 @@ class _SignupScreenState extends State<SignupScreen>
                                   padding: const EdgeInsets.all(20),
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
-                                      colors: [
-                                        Colors.green,
-                                        Colors.green.withOpacity(0.8),
+                                        colors: [
+                                          AppColors.primary,
+                                          AppColors.primaryLight,
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                     ),
-                                    shape: BoxShape.circle,
+                                          color: AppColors.primary.withOpacity(0.3),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.green.withOpacity(0.3),
@@ -527,7 +527,7 @@ class _SignupScreenState extends State<SignupScreen>
                               style: TextStyle(
                                 fontSize: isMobile ? 28 : 34,
                                 fontWeight: FontWeight.w900,
-                                color: Colors.grey[900],
+                                color: AppColors.lightText,
                                 letterSpacing: -0.5,
                                 height: 1.2,
                               ),
@@ -538,7 +538,7 @@ class _SignupScreenState extends State<SignupScreen>
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: isMobile ? 14 : 15,
-                                color: Colors.grey[600],
+                                color: AppColors.lightTextSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
